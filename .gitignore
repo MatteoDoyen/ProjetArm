@@ -50,3 +50,17 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Customs
+.deps/
+Examples/*
+Makefile
+Makefile.in
+arm_simulator
+config.*
+memory_test
+send_irq
+stamp-h1
+aclocal.m4
+configure
+autom4ke.cache/
