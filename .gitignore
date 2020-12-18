@@ -63,4 +63,4 @@ send_irq
 stamp-h1
 aclocal.m4
 configure
-autom4ke.cache/
+autom4te.cache/
