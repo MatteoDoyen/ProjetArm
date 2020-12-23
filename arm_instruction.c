@@ -1,24 +1,24 @@
 /*
-Armator - simulateur de jeu d'instruction ARMv5T à but pédagogique
+Armator - simulateur de jeu d'instruction ARMv5T ï¿½ but pï¿½dagogique
 Copyright (C) 2011 Guillaume Huard
 Ce programme est libre, vous pouvez le redistribuer et/ou le modifier selon les
-termes de la Licence Publique Générale GNU publiée par la Free Software
-Foundation (version 2 ou bien toute autre version ultérieure choisie par vous).
+termes de la Licence Publique Gï¿½nï¿½rale GNU publiï¿½e par la Free Software
+Foundation (version 2 ou bien toute autre version ultï¿½rieure choisie par vous).
 
-Ce programme est distribué car potentiellement utile, mais SANS AUCUNE
+Ce programme est distribuï¿½ car potentiellement utile, mais SANS AUCUNE
 GARANTIE, ni explicite ni implicite, y compris les garanties de
-commercialisation ou d'adaptation dans un but spécifique. Reportez-vous à la
-Licence Publique Générale GNU pour plus de détails.
+commercialisation ou d'adaptation dans un but spï¿½cifique. Reportez-vous ï¿½ la
+Licence Publique Gï¿½nï¿½rale GNU pour plus de dï¿½tails.
 
-Vous devez avoir reçu une copie de la Licence Publique Générale GNU en même
-temps que ce programme ; si ce n'est pas le cas, écrivez à la Free Software
+Vous devez avoir reï¿½u une copie de la Licence Publique Gï¿½nï¿½rale GNU en mï¿½me
+temps que ce programme ; si ce n'est pas le cas, ï¿½crivez ï¿½ la Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
-États-Unis.
+ï¿½tats-Unis.
 
 Contact: Guillaume.Huard@imag.fr
-	 Bâtiment IMAG
+	 Bï¿½timent IMAG
 	 700 avenue centrale, domaine universitaire
-	 38401 Saint Martin d'Hères
+	 38401 Saint Martin d'Hï¿½res
 */
 #include "arm_instruction.h"
 #include "arm_exception.h"
@@ -29,7 +29,75 @@ Contact: Guillaume.Huard@imag.fr
 #include "util.h"
 
 static int arm_execute_instruction(arm_core p) {
-    return 0;
+    uint32_t val_inst;
+    assert(arm_fetch(p,&val_inst));
+
+    uint8_t bits_avant_cond = get_bits(val_inst,27,25);
+    uint8_t debut_opcode = get_bits(val_inst,24,23);
+    uint8_t bit_s = get_bit(val_inst,20);
+    uint8_t bit_vingt_quatre = get_bit(val_inst,24);
+    uint8_t bit_quatre = get_bit(val_inst,4);
+    uint8_t bit_sept = get_bit(val_inst,7);
+    uint8_t opcode = get_bits(val_inst,24,21);
+
+    switch (bits_avant_cond) {
+      case 0:
+
+        if(bit_quatre==0)
+        {
+          //Miscellaneous instructions
+          if(debut_opcode==2 && bit_s==0)
+          {
+
+          }
+          // Data processing immediate shift
+          else
+          {
+            arm_data_processing_shift(p, val_inst);
+          }
+        }
+        // Data processing register shift
+        else
+        {
+          arm_data_processing_shift(p, val_inst);
+        }
+        break;
+      case 1:
+        // UNDEFINED_INSTRUCTION
+        if(debut_opcode==2 && bit_s==0)
+        {
+          return UNDEFINED_INSTRUCTION;
+        }
+        // data processing immediate
+        else
+        {
+          arm_data_processing_immediate_msr(p, val_inst);
+        }
+        break;
+      case 2:
+        // load store immediate offset
+        arm_load_store(p, val_inst);
+        break;
+      case 3:
+        // Load/Store register offset
+        arm_load_store(p, val_inst);
+        break;
+      case 5:
+        // Branch and branch with link
+        arm_branch(p, val_inst);
+        break;
+      case 7:
+        // Software interrupt
+        if(bit_vingt_quatre == 1)
+        {
+          return SOFTWARE_INTERRUPT;
+        }
+        break;
+      default:
+        break;
+    }
+
+    return val_inst;
 }
 
 int arm_step(arm_core p) {
