@@ -27,6 +27,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_branch_other.h"
 #include "arm_constants.h"
 #include "util.h"
+#include <assert.h>
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
@@ -37,9 +38,6 @@ static int arm_execute_instruction(arm_core p) {
     uint8_t bit_s = get_bit(val_inst,20);
     uint8_t bit_vingt_quatre = get_bit(val_inst,24);
     uint8_t bit_quatre = get_bit(val_inst,4);
-    uint8_t bit_sept = get_bit(val_inst,7);
-    uint8_t opcode = get_bits(val_inst,24,21);
-
     switch (bits_avant_cond) {
       case 0:
 
