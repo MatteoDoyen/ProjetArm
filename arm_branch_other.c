@@ -26,22 +26,41 @@ Contact: Guillaume.Huard@imag.fr
 #include <debug.h>
 #include <stdlib.h>
 
+int arm_branch(arm_core p, uint32_t ins)
+{
+    uint32_t target_address = get_bits(ins, 23, 0);
+    uint32_t base_address = arm_read_register(p, 15);
+    uint32_t offset = target_address - base_address;
 
-int arm_branch(arm_core p, uint32_t ins) {
-    return UNDEFINED_INSTRUCTION;
+    if (offset < -33554432 || offset > 33554428)
+    {
+        return 0;
+    }
+    else
+    {
+        if (get_bit(ins, 24))
+        {
+            arm_write_register(p, 14, target_address);
+        }
+        set_bits(offset, 25, 2, target_address);
+        arm_write_register(p, 15, base_address + (offset << 2));
+        return 1;
+    }
 }
 
-
-int arm_coprocessor_others_swi(arm_core p, uint32_t ins) {
-    if (get_bit(ins, 24)) {
+int arm_coprocessor_others_swi(arm_core p, uint32_t ins)
+{
+    if (get_bit(ins, 24))
+    {
         /* Here we implement the end of the simulation as swi 0x123456 */
         if ((ins & 0xFFFFFF) == 0x123456)
             exit(0);
         return SOFTWARE_INTERRUPT;
-    } 
+    }
     return UNDEFINED_INSTRUCTION;
 }
 
-int arm_miscellaneous(arm_core p, uint32_t ins) {
+int arm_miscellaneous(arm_core p, uint32_t ins)
+{
     return UNDEFINED_INSTRUCTION;
 }
