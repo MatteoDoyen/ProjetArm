@@ -30,7 +30,7 @@ int arm_branch(arm_core p, uint32_t ins)
 {
     uint32_t target_address = get_bits(ins, 23, 0);
     uint32_t base_address = arm_read_register(p, 15);
-    uint32_t offset = target_address - base_address;
+    int32_t offset = target_address - base_address;
 
     if (offset < -33554432 || offset > 33554428)
     {
