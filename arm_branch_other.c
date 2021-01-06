@@ -26,25 +26,129 @@ Contact: Guillaume.Huard@imag.fr
 #include <debug.h>
 #include <stdlib.h>
 
+#define PASSED 1
+#define UNPASSED 0
+
 int arm_branch(arm_core p, uint32_t ins)
 {
-    uint32_t target_address = get_bits(ins, 23, 0);
-    uint32_t base_address = arm_read_register(p, 15);
-    int32_t offset = target_address - base_address;
+    int conditionPassed = UNPASSED;
+    uint32_t flags = arm_read_cpsr(p);
+    int flag_N = get_bit(flags, N);
+    int flag_Z = get_bit(flags, Z);
+    int flag_C = get_bit(flags, C);
+    int flag_V = get_bit(flags, V);
 
-    if (offset < -33554432 || offset > 33554428)
-    {
-        return 0;
+    switch(get_bits(ins, 31, 28)) {
+        case 0:
+            if (flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 1:
+            if (!flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 2:
+            if (flag_C) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 3:
+            if (!flag_C) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 4:
+            if (flag_N) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 5:
+            if (!flag_N) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 6:
+            if (flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 7:
+            if (!flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 8:
+            if (flag_C && !flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 9:
+            if (!flag_C || flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 10:
+            if (flag_N == flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 11:
+            if (flag_N != flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 12:
+            if (!flag_Z && flag_N == flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 13:
+            if (flag_Z || (flag_N != flag_V)) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        default:
+            conditionPassed = PASSED;
+            break;
     }
-    else
-    {
-        if (get_bit(ins, 24))
+
+    if (conditionPassed == PASSED) {
+        uint32_t target_address = get_bits(ins, 23, 0);
+        uint32_t base_address = arm_read_register(p, 15);
+        int32_t offset = target_address - base_address;
+
+        if (offset < -33554432 || offset > 33554428)
         {
-            arm_write_register(p, 14, target_address);
+            return 0;
         }
-        set_bits(offset, 25, 2, target_address);
-        arm_write_register(p, 15, base_address + (offset << 2));
-        return 1;
+        else
+        {
+            if (get_bit(ins, 24))
+            {
+                arm_write_register(p, 14, target_address);
+            }
+            offset = set_bits(offset, 25, 2, target_address);
+            arm_write_register(p, 15, base_address + (offset << 2));
+            return 1;
+        }
+    } else {
+        return 0;
     }
 }
 
