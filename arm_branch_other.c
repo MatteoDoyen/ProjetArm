@@ -129,27 +129,44 @@ int arm_branch(arm_core p, uint32_t ins)
     }
 
     if (conditionPassed == PASSED) {
-        uint32_t target_address = get_bits(ins, 23, 0);
-        uint32_t base_address = arm_read_register(p, 15);
-        int32_t offset = target_address - base_address;
+        int32_t address = get_bits(ins, 23, 0);
+        int32_t pc = arm_read_register(p, 15);
 
-        if (offset < -33554432 || offset > 33554428)
+        // On teste si le bit de poids fort est négatif
+        // S'il est négatif, on étend l'adresse sur 30 bits avec des 1
+        int negatif = get_bit(address, 23);
+        if (negatif) {
+            address = 0x3F000000 | address;
+        } else {
+            address = 0x00000000 | address;
+        }
+
+        // Le decalage de deux bits à gauche permet de multiplier la valeur par 4
+        address = address << 2;
+        // Complément à 1
+        address = ~address;
+        // Complément à 2
+        address = address + 1;
+
+        int L = get_bit(ins, 24);
+        if (L)
         {
-            return 0;
+            arm_write_register(p, 14, pc);
+        }
+
+        if (negatif)
+        {
+            arm_write_register(p, 15, pc - address);
         }
         else
         {
-            if (get_bit(ins, 24))
-            {
-                arm_write_register(p, 14, target_address);
-            }
-            offset = set_bits(offset, 25, 2, target_address);
-            arm_write_register(p, 15, base_address + (offset << 2));
-            return 1;
+            arm_write_register(p, 15, pc + address);
         }
-    } else {
-        return 0;
+        
+        return 1;
     }
+
+    return 0;
 }
 
 int arm_coprocessor_others_swi(arm_core p, uint32_t ins)
@@ -166,5 +183,123 @@ int arm_coprocessor_others_swi(arm_core p, uint32_t ins)
 
 int arm_miscellaneous(arm_core p, uint32_t ins)
 {
-    return UNDEFINED_INSTRUCTION;
+    int conditionPassed = UNPASSED;
+    uint32_t flags = arm_read_cpsr(p);
+    int flag_N = get_bit(flags, N);
+    int flag_Z = get_bit(flags, Z);
+    int flag_C = get_bit(flags, C);
+    int flag_V = get_bit(flags, V);
+
+    switch(get_bits(ins, 31, 28)) {
+        case 0:
+            if (flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 1:
+            if (!flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 2:
+            if (flag_C) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 3:
+            if (!flag_C) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 4:
+            if (flag_N) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 5:
+            if (!flag_N) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 6:
+            if (flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 7:
+            if (!flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 8:
+            if (flag_C && !flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 9:
+            if (!flag_C || flag_Z) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 10:
+            if (flag_N == flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 11:
+            if (flag_N != flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 12:
+            if (!flag_Z && flag_N == flag_V) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        case 13:
+            if (flag_Z || (flag_N != flag_V)) {
+                conditionPassed = PASSED;
+            }
+            break;
+
+        default:
+            conditionPassed = PASSED;
+            break;
+    }
+
+    if (conditionPassed == PASSED) {
+        int reg = get_bits(ins, 15, 12);
+        if (reg == 15)
+        {
+            return 0;
+        } 
+        else 
+        {
+            int R = get_bit(ins, 22);
+            if (R)
+            {
+                arm_write_register(p, reg, arm_read_spsr(p));
+            }
+            else
+            {
+                arm_write_register(p, reg, arm_read_cpsr(p));
+            }
+            return 1;
+        }
+    }
+
+    return 0;
 }
