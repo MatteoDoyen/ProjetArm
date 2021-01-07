@@ -35,289 +35,72 @@ int arm_load_store(arm_core p, uint32_t ins) {
     uint8_t bit_P = get_bit(ins, 24); // bit P
     uint8_t bit_W = get_bit(ins, 21); // bit W
 
+    uint8_t rn = get_bits(ins, 19, 16);
+    uint8_t rd = get_bits(ins, 15, 12);
+    uint32_t base_address = arm_read_register(p, rn);
 
-    if (bit_register_offset) { // register shift
+    int32_t offset = 0;
+    uint32_t value = 0;
+
+    if (bit_register_offset) { // register offset 
+        offset = arm_read_register(p, get_bits(ins, 3, 0));
         if (get_bits(ins, 11, 4)) { // scaled register offset
-            int32_t shift = arm_read_register(p, get_bits(ins, 3, 0)); // valeur du shift
             uint8_t shift_imm = get_bits(ins, 11, 7);
 
             switch(get_bits(ins, 6, 5)) {
                 case 0:
-                    shift = shift << shift_imm;
+                    offset = offset << shift_imm;
                     break;
                 case 1:
                     if (shift_imm == 0) {
-                        shift = 0;
+                        offset = 0;
                     }
                     else {
-                        shift = shift >> shift_imm;
+                        offset = offset >> shift_imm;
                     }
                     break;
                 case 2:
-                    shift = asr(shift, shift_imm);
+                    offset = asr(offset, shift_imm);
                     break;
                 case 3:
-                    shift = ror(shift, shift_imm);
+                    offset = ror(offset, shift_imm);
                     break;
-            }
-
-            shift = bit_add ? shift : -shift;
-
-            uint8_t rn = get_bits(ins, 19, 16);
-            uint8_t rd = get_bits(ins, 15, 12);
-
-            uint32_t base_address = arm_read_register(p, rn);
-
-            if (bit_load) { // load
-                if (bit_P) { // bit P
-                    if (bit_byte) { // bit B
-                        // LDRB
-                        uint8_t value;
-                        arm_read_byte(p, base_address + shift, &value);
-                        arm_write_register(p, rd, value);
-                    }
-                    else {
-                        // LDR
-                        uint32_t value;
-                        arm_read_word(p, base_address + shift, &value);
-                        arm_write_register(p, rd, value);
-                    }
-
-                    if (bit_W) {
-                        arm_write_byte(p, rn, base_address + shift);
-                    }
-                }
-                else {
-                    if (!bit_W) { // bit W
-                        if (bit_byte) { // bit B
-                            // LDRB
-                            uint8_t value;
-                            arm_read_byte(p, base_address, &value);
-                            arm_write_register(p, rd, value);
-                        }
-                        else {
-                            // LDR
-                            uint32_t value;
-                            arm_read_word(p, base_address, &value);
-                            arm_write_register(p, rd, value);
-                        }
-                        arm_write_byte(p, rn, base_address + shift);
-                    }
-                }
-            }
-            else { // store
-
-                if (bit_P) { // bit P
-                    if (bit_byte) { // bit B
-                        // STRB
-                        uint8_t value;
-                        value = (uint8_t)arm_read_register(p, rd);
-                        arm_write_byte(p, base_address + shift, value);
-                    }
-                    else {
-                        // STR
-                        uint32_t value;
-                        value = arm_read_register(p, rd);
-                        arm_write_word(p, base_address + shift, value);
-                    }
-
-                    if (bit_W) {
-                        arm_write_register(p, rn, base_address + shift);
-                    }
-                }
-                else {
-                    if (!bit_W) { // bit W
-                        if (bit_byte) { // bit B
-                            // STRB
-                            uint8_t value;
-                            value = (uint8_t)arm_read_register(p, rd);
-                            arm_write_byte(p, base_address + shift, value);
-                        }
-                        else {
-                            // STR
-                            uint32_t value;
-                            value = arm_read_register(p, rd);
-                            arm_write_word(p, base_address + shift, value);
-                        }
-                        arm_write_register(p, rn, base_address + shift);
-                    }
-                }
-            }
-        }
-        else { // register offset
-
-            int32_t shift = arm_read_register(p, get_bits(ins, 3, 0)); // valeur du shift
-            shift = bit_add ? shift : -shift;
-            
-            uint8_t rn = get_bits(ins, 19, 16);
-            uint8_t rd = get_bits(ins, 15, 12);
-
-            uint32_t base_address = arm_read_register(p, rn);
-
-            if (bit_load) { // load
-
-                if (bit_P) { // bit P
-                    if (bit_byte) { // bit B
-                        // LDRB
-                        uint8_t value;
-                        arm_read_byte(p, base_address + shift, &value);
-                        arm_write_register(p, rd, value);
-                    }
-                    else {
-                        // LDR
-                        uint32_t value;
-                        arm_read_word(p, base_address + shift, &value);
-                        arm_write_register(p, rd, value);
-                    }
-
-                    if (bit_W) {
-                        arm_write_byte(p, rn, base_address + shift);
-                    }
-                }
-                else {
-                    if (!bit_W) { // bit W
-                        if (bit_byte) { // bit B
-                            // LDRB
-                            uint8_t value;
-                            arm_read_byte(p, base_address, &value);
-                            arm_write_register(p, rd, value);
-                        }
-                        else {
-                            // LDR
-                            uint32_t value;
-                            arm_read_word(p, base_address, &value);
-                            arm_write_register(p, rd, value);
-                        }
-                        arm_write_byte(p, rn, base_address + shift);
-                    }
-                }
-            }
-            else { // store
-
-                if (bit_P) { // bit P
-                    if (bit_byte) { // bit B
-                        // LDRB
-                        uint8_t value;
-                        value = (uint8_t)arm_read_register(p, rd);
-                        arm_write_byte(p, base_address + shift, value);
-                    }
-                    else {
-                        // LDR
-                        uint32_t value;
-                        value = arm_read_register(p, rd);
-                        arm_write_word(p, base_address + shift, value);
-                    }
-
-                    if (bit_W) {
-                        arm_write_register(p, rn, base_address + shift);
-                    }
-                }
-                else {
-                    if (!bit_W) { // bit W
-                        if (bit_byte) { // bit B
-                            // LDRB
-                            uint8_t value;
-                            value = (uint8_t)arm_read_register(p, rd);
-                            arm_write_byte(p, base_address + shift, value);
-                        }
-                        else {
-                            // LDR
-                            uint32_t value;
-                            value = arm_read_register(p, rd);
-                            arm_write_word(p, base_address + shift, value);
-                        }
-                        arm_write_register(p, rn, base_address + shift);
-                    }
-                }
             }
         }
     }
-    else { // immediate offset
+    else { // immediate
+        offset = get_bits(ins, 11, 0);
+    }
 
-        int16_t shift = get_bits(ins, 11, 0); // valeur du shift
-        shift = bit_add ? shift : -shift;
+    offset = bit_add ? offset : -offset;
+
+    if (bit_P) {
+        base_address = base_address + offset;
+    }
+
+    if (bit_load) { // load
+        if (bit_byte) {
+            arm_read_byte(p, base_address, &value);
+        }
+        else {
+            arm_read_word(p, base_address, &value);
+        }
         
-        uint8_t rn = get_bits(ins, 19, 16);
-        uint8_t rd = get_bits(ins, 15, 12);
-
-        uint32_t base_address = arm_read_register(p, rn);
-
-        if (bit_load) { // load
-
-            if (bit_P) { // bit P
-                if (bit_byte) { // bit B
-                    // LDRB
-                    uint8_t value;
-                    arm_read_byte(p, base_address + shift, &value);
-                    arm_write_register(p, rd, value);
-                }
-                else {
-                    // LDR
-                    uint32_t value;
-                    arm_read_word(p, base_address + shift, &value);
-                    arm_write_register(p, rd, value);
-                }
-
-                if (bit_W) {
-                    arm_write_byte(p, rn, base_address + shift);
-                }
-            }
-            else {
-                if (!bit_W) { // bit W
-                    if (bit_byte) { // bit B
-                        // LDRB
-                        uint8_t value;
-                        arm_read_byte(p, base_address, &value);
-                        arm_write_register(p, rd, value);
-                    }
-                    else {
-                        // LDR
-                        uint32_t value;
-                        arm_read_word(p, base_address, &value);
-                        arm_write_register(p, rd, value);
-                    }
-                    arm_write_byte(p, rn, base_address + shift);
-                }
-            }
+        arm_write_register(p, rd, value);
+    }
+    else { // store
+        value = arm_read_register(p, rd);
+        if (bit_byte) {
+            arm_write_byte(p, base_address, (uint8_t)value);
         }
-        else { // store
-
-            if (bit_P) { // bit P
-                if (bit_byte) { // bit B
-                    // LDRB
-                    uint8_t value;
-                    value = (uint8_t)arm_read_register(p, rd);
-                    arm_write_byte(p, base_address + shift, value);
-                }
-                else {
-                    // LDR
-                    uint32_t value;
-                    value = arm_read_register(p, rd);
-                    arm_write_word(p, base_address + shift, value);
-                }
-
-                if (bit_W) {
-                    arm_write_register(p, rn, base_address + shift);
-                }
-            }
-            else {
-                if (!bit_W) { // bit W
-                    if (bit_byte) { // bit B
-                        // LDRB
-                        uint8_t value;
-                        value = (uint8_t)arm_read_register(p, rd);
-                        arm_write_byte(p, base_address, value);
-                    }
-                    else {
-                        // LDR
-                        uint32_t value;
-                        value = arm_read_register(p, rd);
-                        arm_write_word(p, base_address, value);
-                    }
-                    arm_write_register(p, rn, base_address + shift);
-                }
-            }
+        else {
+            arm_write_word(p, base_address, value);
         }
+    }
+
+    if (bit_P == bit_W) {
+        base_address = bit_P ? base_address : base_address + offset; 
+        arm_write_register(p, rn, base_address);
     }
 
     return UNDEFINED_INSTRUCTION;
