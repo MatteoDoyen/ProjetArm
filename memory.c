@@ -60,12 +60,11 @@ void memory_destroy(memory mem) {
 int memory_read_byte(memory mem, uint32_t address, uint8_t *value) {
     if(address>memory_get_size(mem)-1)
     {
-            fprintf(stderr, "test\n");
-            return 0;
+            return -1;
     }
     *value = mem->tab[address];
 
-    return 1;
+    return 0;
 }
 
 int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
@@ -73,42 +72,42 @@ int memory_read_half(memory mem, uint32_t address, uint16_t *value) {
 
     if(mem->is_big_endian)
     {
-        return memory_read_byte(mem,address,(val+1)) && memory_read_byte(mem,address+1,val);
+        return !memory_read_byte(mem,address,(val+1)) && !memory_read_byte(mem,address+1,val) -1;
     }
-    return memory_read_byte(mem,address,(val)) && memory_read_byte(mem,address+1,(val+1));
+    return !memory_read_byte(mem,address,(val)) && !memory_read_byte(mem,address+1,(val+1)) -1;
 }
 
 int memory_read_word(memory mem, uint32_t address, uint32_t *value) {
     uint16_t *val = (uint16_t *) value;
     if(mem->is_big_endian)
     {
-            return memory_read_half(mem,address,(val+1)) && memory_read_half(mem,address+2,(val));
+            return !memory_read_half(mem,address,(val+1)) && !memory_read_half(mem,address+2,(val)) -1;
     }
-    return memory_read_half(mem,address,val) && memory_read_half(mem,address+2,(val+1));
+    return !memory_read_half(mem,address,val) && !memory_read_half(mem,address+2,(val+1)) -1;
 }
 
 int memory_write_byte(memory mem, uint32_t address, uint8_t value) {
     if(address>memory_get_size(mem)-1){
-        return 0;
+        return -1;
     }
     mem->tab[address] = value;
-    return 1;
+    return 0;
 }
 
 int memory_write_half(memory mem, uint32_t address, uint16_t value) {
     uint8_t *val = (uint8_t *) &value;
     if(mem->is_big_endian)
     {
-      return memory_write_byte(mem,address,*(1+val)) && memory_write_byte(mem,address+1,*val);
+      return !memory_write_byte(mem,address,*(1+val)) && !memory_write_byte(mem,address+1,*val) -1;
     }
-    return memory_write_byte(mem,address,*val) && memory_write_byte(mem,address+1,*(val+1));
+    return !memory_write_byte(mem,address,*val) && !memory_write_byte(mem,address+1,*(val+1)) -1;
 }
 
 int memory_write_word(memory mem, uint32_t address, uint32_t value) {
     uint16_t *val = (uint16_t *) &value;
     if(mem->is_big_endian)
     {
-      return memory_write_half(mem,address,*(val+1)) && memory_write_half(mem,address+2,*val);
+      return !memory_write_half(mem,address,*(val+1)) && !memory_write_half(mem,address+2,*val) -1;
     }
-    return memory_write_half(mem,address,*val) && memory_write_half(mem,address+2,*(val+1));
+    return !memory_write_half(mem,address,*val) && !memory_write_half(mem,address+2,*(val+1)) -1;
 }
