@@ -72,10 +72,6 @@ Contact: Guillaume.Huard@imag.fr
 #define BIC 0b1110
 #define MVN 0b1111
 
-/* arm_utils conditions */
-#define PASSED 1
-#define UNPASSED 0
-
 /* Bit mask constants for msr */
 /* We simulate architecture v5T */
 #define UnallocMask 0x0FFFFF00
