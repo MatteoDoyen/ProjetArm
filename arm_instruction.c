@@ -38,7 +38,6 @@ static int arm_execute_instruction(arm_core p) {
     uint8_t bit_s = get_bit(val_inst,20);
     uint8_t bit_vingt_quatre = get_bit(val_inst,24);
     uint8_t bit_quatre = get_bit(val_inst,4);
-
     switch (bits_avant_cond) {
       case 0:
 

@@ -67,16 +67,14 @@ int in_a_privileged_mode(registers r) {
 
 uint32_t read_register(registers r, uint8_t reg) {
     assert(reg<37);
-    int8_t num_rg = matriceReg[r->mode][reg];
-    assert(num_rg>=0);
-    return r->reg[num_rg];
+    uint32_t value=r->reg[reg];
+    return value;
 }
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
     assert(!in_a_privileged_mode(r));
-    int8_t num_rg = matriceReg[r->mode][reg];
-    assert(num_rg>=0);
-    return r->reg[num_rg];
+    uint32_t value=r->reg[reg];
+    return value;
 }
 
 uint32_t read_cpsr(registers r) {
@@ -86,9 +84,8 @@ uint32_t read_cpsr(registers r) {
 
 uint32_t read_spsr(registers r) {
     assert(current_mode_has_spsr(r));
-    int8_t num_rg = matriceReg[r->mode][17];
-    assert(num_rg>=0);
-    return r->reg[num_rg];
+    uint32_t value=r->reg[17];
+    return value;
 }
 
 void write_register(registers r, uint8_t reg, uint32_t value) {
