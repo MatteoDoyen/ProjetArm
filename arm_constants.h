@@ -54,6 +54,10 @@ Contact: Guillaume.Huard@imag.fr
 #define ASR 2
 #define ROR 3
 
+/* arm_utils conditions */
+#define PASSED 1
+#define UNPASSED 0
+
 /* Bit mask constants for msr */
 /* We simulate architecture v5T */
 #define UnallocMask 0x0FFFFF00
