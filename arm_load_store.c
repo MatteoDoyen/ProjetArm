@@ -107,6 +107,65 @@ int arm_load_store(arm_core p, uint32_t ins) {
 }
 
 int arm_load_store_multiple(arm_core p, uint32_t ins) {
+
+    uint8_t bit_load = get_bit(ins, 20); // bit L
+    uint8_t bit_write_back = get_bit(ins, 21); // bit W
+    uint8_t bit_S = get_bit(ins, 22); // bit S
+    uint8_t bit_increment = get_bit(ins, 23); // bit U
+    uint8_t bit_before = get_bit(ins, 24); // bit P
+
+    uint8_t rn = get_bits(ins, 19, 16);
+    uint16_t register_list = get_bits(ins, 15, 0);
+    uint32_t base_address = arm_read_register(p, rn);
+
+    int8_t step = 4;
+    uint32_t value = 0;
+    int8_t number_bit_set = 0;
+
+    for (int i = 0; i < 16; i++) {
+        if (get_bit(register_list, i))
+            number_bit_set++;
+    }    
+
+    if (bit_increment) {
+        if (bit_before)
+            base_address += step;
+    }
+    else {
+        base_address -= (number_bit_set * 4) + 4;
+        if (bit_before)
+            base_address -= step;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        if (get_bit(register_list, i)) {
+            if (bit_load) { // load
+                arm_read_word(p, base_address, &value);
+                arm_write_register(p, i, value);
+            }
+            else { // store
+                value = arm_read_register(p, i);
+                arm_write_word(p, base_address, value);
+            }
+            base_address += step;
+        }
+    }
+    
+    if (bit_write_back) {
+        if (bit_increment) {
+            if (bit_before)
+                arm_write_register(p, rn, base_address);
+            else
+                arm_write_register(p, rn, base_address + step);
+        }
+        else {
+            if (bit_before)
+                arm_write_register(p, rn, base_address + 4 - (number_bit_set * 4));
+            else
+                arm_write_register(p, rn, base_address - (number_bit_set * 4));
+        }
+    }
+
     return UNDEFINED_INSTRUCTION;
 }
 
