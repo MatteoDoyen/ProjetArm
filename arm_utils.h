@@ -8,6 +8,6 @@ void arm_update_flags(arm_core p, uint8_t n_flag, uint8_t z_flag, uint8_t c_flag
 
 int arm_check_condition(arm_core p, uint8_t condition_field);
 
-uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint8_t shift_amount, uint32_t second_operand);
+uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry, uint8_t immediate_shift);
 
 #endif

@@ -11,7 +11,7 @@ void arm_update_flags(arm_core p, uint8_t n_flag, uint8_t z_flag, uint8_t c_flag
     flags &= ~(0xF << 28);
     flags |= ((n_flag << 3 | z_flag << 2 | c_flag << 1 | v_flag) << 28);
 
-    // doesn't work (idk why!)
+    // doesn't work (idk why, shane is nul!)
     //set_bits(flags, 31, 28, (n_flag << 3 | z_flag << 2 | c_flag << 1 | v_flag));
 
     arm_write_cpsr(p, flags);
@@ -121,57 +121,51 @@ int arm_check_condition(arm_core p, uint8_t condition_field) {
     return condition_state;
 }
 
-uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint8_t shift_amount, uint32_t second_operand, uint8_t *shift_carry) {
-
-	switch (shift_type)
-	{
-		case LSL:
-			second_operand <<= shift_amount;
-			break;
-		case LSR:
-			second_operand >>= shift_amount;
-			break;
-		case ASR:
-			second_operand = asr(second_operand, shift_amount);
-			break;
-		case ROR:
-			second_operand = ror(second_operand, shift_amount);
-			break;
-		default:
-			return second_operand;
-			break;
-	}
-
-	return -1;
-}
-
-static uint8_t get_shift_value(uint8_t shift_amount, uint8_t shift_type, uint32_t operand, uint8_t *shift_carry) {
+uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry, uint8_t immediate_shift) {
+    uint32_t flags = arm_read_cpsr(p);
+    *shift_carry = get_bit(flags, C);
     switch (shift_type)
     {
         case LSL:
-            if (shift_amount == 32) 
+            if(immediate_shift && shift_amount > 0)
+            {
+              operand <<= shift_amount;
+              *shift_carry = get_bit(operand, 32 - shift_amount);
+            }
+            else if (shift_amount == 32)
             {
                 *shift_carry = get_bit(operand, 0);
                 operand = 0;
-            } 
-            else if (shift_amount < 32) 
+            }
+            else if (shift_amount < 32)
             {
                 *shift_carry = get_bit(operand, 32-shift_amount);
                 operand <<= shift_amount;
-            } 
-            else 
+            }
+            else
             {
                 *shift_carry = 0;
                 operand = 0;
             }
             break;
         case LSR:
-            if (shift_amount == 32) 
+            if (immediate_shift && shift_amount == 0)
+            {
+                operand = 0;
+                *shift_carry = get_bit(operand, 31);
+            }
+            //if shift_amount > 0 and immediate_shift
+            else if(immediate_shift)
+            {
+              operand >>= shift_amount;
+              *shift_carry = get_bit(operand,shift_amount-1);
+            }
+            else if (shift_amount == 32)
             {
                 *shift_carry = get_bit(operand, 31);
                 operand = 0;
-            } 
-            else if (shift_amount < 32) 
+            }
+            else if (shift_amount < 32)
             {
                 *shift_carry = get_bit(operand, shift_amount-1);
                  operand >>= shift_amount;
@@ -183,48 +177,57 @@ static uint8_t get_shift_value(uint8_t shift_amount, uint8_t shift_type, uint32_
             }
             break;
         case ASR:
-            if (shift_amount >= 32)
+            if (shift_amount == 0 && immediate_shift)
+            {
+                if(get_bit(operand,31) == 0)
+                {
+                  operand = 0;
+                  *shift_carry = get_bit(operand, 31);
+                }
+                else
+                {
+                  operand = 0xFFFFFFFF;
+                  *shift_carry = get_bit(operand, 31);
+                }
+            }
+            //if shift_amount > 0 and immediate_shift
+            else if(immediate_shift)
+            {
+              operand = asr(operand, shift_amount);
+              *shift_carry = get_bit(operand,shift_amount-1);
+            }
+            else if (shift_amount >= 32)
             {
                 *shift_carry = get_bit(operand, 31);
                 operand = *shift_carry ? 0xFFFFFFFF : 0x0;
-            } 
-            else 
+            }
+            else
             {
                 *shift_carry = get_bit(operand, shift_amount-1);
                 operand = asr(operand, shift_amount);
             }
             break;
         case ROR:
-            if (shift_amount == 32) 
-            {
-                *shift_carry = get_bit(operand, 31);
-            } 
-            else if (shift_amount > 32) 
-            {
-                *shift_carry = get_bit(operand, shift_amount-32);
-            }
+              if (shift_amount == 0 && immediate_shift)
+              {
+                  *shift_carry = get_bit(operand, 0);
+                  operand = (get_bit(flags, C) << N) | (operand >> 1);
+              }
+              else if(immediate_shift)
+              {
+                operand = ror(operand, shift_amount);
+                *shift_carry = get_bit(operand, shift_amount-1);
+              }
+              else if(get_bits(shift_amount,4,0) == 0 )
+              {
+                *shift_carry = get_bit(operand,31);
+              }
+              else
+              {
+                *shift_carry = get_bit(operand,get_bits(shift_amount,4,0)-1);
+                operand = ror(operand, get_bits(shift_amount,4,0));
+              }
             break;
     }
-}   
-
-static uint32_t shift_t(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry) {
-    if (shift_amount == 0)
-    {
-        uint32_t flags = arm_read_cpsr(p);
-        switch (shift_type) {
-            case ROR:
-                *shift_carry = get_bit(operand, 0);
-                operand = (get_bit(flags, C) << N) | (operand >> 1);
-                break;
-            default:
-                *shift_carry = get_bit(flags, C);
-                break;
-        }
-    }
-    else
-    {
-        
-    }
-
     return operand;
 }
