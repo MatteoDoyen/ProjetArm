@@ -26,18 +26,35 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_load_store.h"
 #include "arm_branch_other.h"
 #include "arm_constants.h"
+#include "arm_utils.h"
 #include "util.h"
 #include <assert.h>
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
-    assert(arm_fetch(p,&val_inst));
+    
+    int result_value = arm_fetch(p,&val_inst);
 
+    // check if result_value has no exceptions
+    if (result_value) 
+    {
+      return -1;
+    }
+
+    uint8_t cond_field = get_bits(val_inst, 31, 28);
     uint8_t bits_avant_cond = get_bits(val_inst,27,25);
     uint8_t debut_opcode = get_bits(val_inst,24,23);
     uint8_t bit_s = get_bit(val_inst,20);
     uint8_t bit_vingt_quatre = get_bit(val_inst,24);
     uint8_t bit_quatre = get_bit(val_inst,4);
+
+    int result_condition = arm_check_condition(p, cond_field);
+
+    if (result_condition == UNPASSED) 
+    {
+        return -1;
+    }
+
     switch (bits_avant_cond) {
       case 0:
 
