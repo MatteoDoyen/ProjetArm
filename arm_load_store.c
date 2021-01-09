@@ -25,7 +25,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 #include "debug.h"
-// TODO : halfword
+// TODO : changer valeur de retour
 int arm_load_store(arm_core p, uint32_t ins) {
 
     uint8_t bit_register_offset = get_bit(ins, 25); // bit I
@@ -117,53 +117,39 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     uint8_t rn = get_bits(ins, 19, 16);
     uint16_t register_list = get_bits(ins, 15, 0);
     uint32_t base_address = arm_read_register(p, rn);
+    uint32_t write_back_value = base_address;
 
-    int8_t step = 4;
     uint32_t value = 0;
     int8_t number_bit_set = 0;
-
-    for (int i = 0; i < 16; i++) {
-        if (get_bit(register_list, i))
-            number_bit_set++;
-    }    
-
-    if (bit_increment) {
-        if (bit_before)
-            base_address += step;
-    }
-    else {
-        base_address -= (number_bit_set * 4) + 4;
-        if (bit_before)
-            base_address -= step;
-    }
+    uint8_t registers_tab[16] = {-1};
 
     for (int i = 0; i < 16; i++) {
         if (get_bit(register_list, i)) {
-            if (bit_load) { // load
-                arm_read_word(p, base_address, &value);
-                arm_write_register(p, i, value);
-            }
-            else { // store
-                value = arm_read_register(p, i);
-                arm_write_word(p, base_address, value);
-            }
-            base_address += step;
+            registers_tab[number_bit_set] = i;
+            number_bit_set++;
         }
+    }
+
+    int8_t step = bit_increment ? 4 : -4;
+    write_back_value += number_bit_set * step;
+    base_address = bit_increment ? base_address : base_address - (number_bit_set * 4) + 4;
+    base_address = bit_before ? bit_before + step : base_address;
+
+    int i = 0;
+    while (registers_tab[i] != -1) {
+        if (bit_load) { // load
+            arm_read_word(p, base_address + 4 * i, &value);
+            arm_write_register(p, i, value);
+        }
+        else { // store
+            value = arm_read_register(p, i);
+            arm_write_word(p, base_address + 4 * i, value);
+        }
+        i++;
     }
     
     if (bit_write_back) {
-        if (bit_increment) {
-            if (bit_before)
-                arm_write_register(p, rn, base_address);
-            else
-                arm_write_register(p, rn, base_address + step);
-        }
-        else {
-            if (bit_before)
-                arm_write_register(p, rn, base_address + 4 - (number_bit_set * 4));
-            else
-                arm_write_register(p, rn, base_address - (number_bit_set * 4));
-        }
+        arm_write_register(p, rn, write_back_value);
     }
 
     return UNDEFINED_INSTRUCTION;
