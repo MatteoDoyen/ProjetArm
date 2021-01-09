@@ -25,17 +25,20 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "arm_branch_other.h"
 #include "util.h"
+#include "arm_utils.h"
 #include "debug.h"
 
 /* Decoding functions for different classes of instructions */
 int arm_data_processing_shift(arm_core p, uint32_t ins) {
-	uint32_t result_value;
+	int32_t result_value;
 
-	uint8_t carry_bit = get_bit(ins, 28);
+	uint8_t carry_bit = get_bit(ins, C);
 
 	uint8_t bit_i = get_bit(ins, 25);
 
 	uint8_t opcode = get_bits(ins, 24, 21);
+
+	uint8_t S = get_bit(ins, 20);
 
 	uint8_t rn_register_number = get_bits(ins,19,16);
 	uint32_t first_operand = arm_read_register(p, rn_register_number);
@@ -44,54 +47,36 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 
 	uint32_t second_operand;
 
+	uint8_t shift_amount;
+	uint8_t shift_type;
+
 	if (bit_i == 0)
 	{
 		uint8_t bit_quatre = get_bit(ins, 4);
-		uint8_t shift_type = get_bits(ins,6,5);
+		
+		shift_type = get_bits(ins,6,5);
 
 		uint8_t register_number = get_bits(ins,3,0);
 		second_operand = arm_read_register(p, register_number);
 
-		uint8_t shift_amount;
-
 		if (bit_quatre == 0)
 		{
 			shift_amount = get_bits(ins,11,7);
-
 		}
 		else
 		{
-			uint8_t register_number = get_bits(ins,11,8);
-			shift_amount = arm_read_register(p, register_number);
-		}
-
-		switch (shift_type)
-		{
-			case LSL:
-				second_operand <<= shift_amount;
-				break;
-			case LSR:
-				second_operand >>= shift_amount;
-				break;
-			case ASR:
-				second_operand = asr(second_operand, shift_amount);
-				break;
-			case ROR:
-				second_operand = ror(second_operand, shift_amount);
-				break;
-			default:
-				break;
+			uint8_t register_shift_number = get_bits(ins,11,8);
+			shift_amount = arm_read_register(p, register_shift_number);
 		}
 	}
 	else
 	{
 		second_operand = get_bits(ins,7,0);
-		uint8_t rotate_value = get_bits(ins,11,8);
-
-		second_operand = ror(second_operand, rotate_value);
+		shift_amount = get_bits(ins,11,8);
+		shift_type = ROR;
 	}
 
-	//  write_register(registers r, uint8_t reg, uint32_t value)
+	second_operand = arm_decode_shift(p, shift_type, shift_amount, second_operand);
 
 	switch (opcode)
 	{
@@ -111,7 +96,14 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 			result_value = first_operand + second_operand;
 			break;
 		case ADC:
-			// oupsi
+			result_value = first_operand + second_operand + carry_bit;
+			if (S) 
+			{
+				arm_update_flags(p,
+					get_bit(result_value, N),
+					(result_value == 0),
+					carry_bit,);
+			}
 			break;
 		case SBC:
 			// oupsi
