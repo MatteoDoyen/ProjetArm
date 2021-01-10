@@ -32,38 +32,36 @@ Contact: Guillaume.Huard@imag.fr
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
-    
+
     int result_value = arm_fetch(p,&val_inst);
 
     // check if result_value has no exceptions
-    if (result_value) 
+    if (result_value == EXCEPTION)
     {
-      return -1;
+      return EXCEPTION;
     }
 
     uint8_t cond_field = get_bits(val_inst, 31, 28);
     uint8_t bits_avant_cond = get_bits(val_inst,27,25);
     uint8_t debut_opcode = get_bits(val_inst,24,23);
     uint8_t bit_s = get_bit(val_inst,20);
-    uint8_t bit_vingt_quatre = get_bit(val_inst,24);
     uint8_t bit_quatre = get_bit(val_inst,4);
 
     int result_condition = arm_check_condition(p, cond_field);
 
-    if (result_condition == UNPASSED) 
+    if (result_condition == UNPASSED)
     {
-        return -1;
+        return EXCEPTION;
     }
 
     switch (bits_avant_cond) {
       case 0:
-
         if(bit_quatre==0)
         {
           //Miscellaneous instructions
           if(debut_opcode==2 && bit_s==0)
           {
-
+            arm_miscellaneous(p, val_inst);
           }
           // Data processing immediate shift
           else
@@ -97,16 +95,19 @@ static int arm_execute_instruction(arm_core p) {
         // Load/Store register offset
         arm_load_store(p, val_inst);
         break;
+      case 4:
+        arm_load_store_multiple(p, val_inst);
+        break;
       case 5:
         // Branch and branch with link
         arm_branch(p, val_inst);
         break;
+      case 6:
+        arm_coprocessor_load_store(p, val_inst);
+        break;
       case 7:
         // Software interrupt
-        if(bit_vingt_quatre == 1)
-        {
-          return SOFTWARE_INTERRUPT;
-        }
+        arm_coprocessor_others_swi(p, val_inst);
         break;
       default:
         break;

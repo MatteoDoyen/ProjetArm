@@ -41,6 +41,7 @@ Contact: Guillaume.Huard@imag.fr
 #define DATA_ABORT              5
 #define INTERRUPT               6
 #define FAST_INTERRUPT          7
+#define EXCEPTION -1
 
 /* Some CPSR bits */
 #define N 31
