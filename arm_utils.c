@@ -196,7 +196,9 @@ uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint
               if (shift_amount == 0 && immediate_shift)
               {
                   *shift_carry = get_bit(operand, 0);
+                  debug("second operand ROR before : %d\n", operand);
                   operand = (get_bit(flags, C) << N) | (operand >> 1);
+                  debug("second operand ROR after : %d\n", operand);
               }
               else if(immediate_shift)
               {

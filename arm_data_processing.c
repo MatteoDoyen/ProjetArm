@@ -45,10 +45,12 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 
 	uint32_t second_operand, result_value;
 
-	uint8_t shift_amount, shift_type , shift_carry;
+	uint8_t shift_amount, shift_type, shift_carry;
 
 	if (immediate_shift == 0)
 	{
+		debug("register\n");
+
 		uint8_t bit_quatre = get_bit(ins, 4);
 
 		shift_type = get_bits(ins,6,5);
@@ -65,15 +67,22 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			uint8_t register_shift_number = get_bits(ins,11,8);
 			shift_amount = arm_read_register(p, register_shift_number);
 		}
+
+		second_operand = arm_decode_shift(p, shift_type, second_operand, shift_amount, &shift_carry, immediate_shift);
 	}
 	else
 	{
+		debug("immediate\n");
 		second_operand = get_bits(ins,7,0);
 		shift_amount = get_bits(ins,11,8);
-		shift_type = ROR;
+		second_operand = ror(second_operand, shift_amount*2);
 	}
 
-	second_operand = arm_decode_shift(p, shift_type, second_operand, shift_amount, &shift_carry, immediate_shift);
+	debug("shift type: %d\n", shift_type);
+	debug("shift amount : %d\n", shift_amount);
+	debug("second operand : %d\n", second_operand);
+	debug("immediate_shift : %d\n", immediate_shift);
+	debug("opcode : %d\n", opcode);
 
 	switch (opcode)
 	{
@@ -128,7 +137,12 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case SUB:
+			debug("SUB\n");
 			result_value = first_operand - second_operand;
+			debug("first operand : %d\n", first_operand);
+			debug("second_operand : %d\n", second_operand);
+			debug("rv %d\n", result_value);
+
 			if (S && rd_register_number == 15)
 			{
 				if (arm_current_mode_has_spsr(p))
@@ -362,6 +376,7 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 					overflow_bit
 				);
 			}
+			debug("result: %d\n", result_value);
 			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case BIC:

@@ -29,6 +29,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_utils.h"
 #include "util.h"
 #include <assert.h>
+#include "debug.h"
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
@@ -61,18 +62,18 @@ static int arm_execute_instruction(arm_core p) {
           //Miscellaneous instructions
           if(debut_opcode==2 && bit_s==0)
           {
-            arm_miscellaneous(p, val_inst);
+            return arm_miscellaneous(p, val_inst);
           }
           // Data processing immediate shift
           else
           {
-            arm_data_processing_shift(p, val_inst);
+            return arm_data_processing_shift(p, val_inst);
           }
         }
         // Data processing register shift
         else
         {
-          arm_data_processing_shift(p, val_inst);
+          return arm_data_processing_shift(p, val_inst);
         }
         break;
       case 1:
@@ -84,36 +85,37 @@ static int arm_execute_instruction(arm_core p) {
         // data processing immediate
         else
         {
-          arm_data_processing_immediate_msr(p, val_inst);
+          debug("data MSR immediate \n");
+          return arm_data_processing_immediate_msr(p, val_inst);
         }
         break;
       case 2:
         // load store immediate offset
-        arm_load_store(p, val_inst);
+        return arm_load_store(p, val_inst);
         break;
       case 3:
         // Load/Store register offset
-        arm_load_store(p, val_inst);
+        return arm_load_store(p, val_inst);
         break;
       case 4:
-        arm_load_store_multiple(p, val_inst);
+        return arm_load_store_multiple(p, val_inst);
         break;
       case 5:
         // Branch and branch with link
-        arm_branch(p, val_inst);
+        return arm_branch(p, val_inst);
         break;
       case 6:
-        arm_coprocessor_load_store(p, val_inst);
+        return arm_coprocessor_load_store(p, val_inst);
         break;
       case 7:
         // Software interrupt
-        arm_coprocessor_others_swi(p, val_inst);
+        return arm_coprocessor_others_swi(p, val_inst);
         break;
       default:
+        return UNDEFINED_INSTRUCTION;
         break;
     }
 
-    return val_inst;
 }
 
 int arm_step(arm_core p) {
