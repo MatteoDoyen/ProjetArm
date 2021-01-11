@@ -25,7 +25,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 #include "debug.h"
-// TODO : changer valeur de retour
+// TODO : changer valeur de retour et rajouter modification CPSR l.157
 int arm_load_store(arm_core p, uint32_t ins) {
 
     uint8_t bit_register_offset = get_bit(ins, 25); // bit I
@@ -48,10 +48,10 @@ int arm_load_store(arm_core p, uint32_t ins) {
             uint8_t shift_imm = get_bits(ins, 11, 7);
 
             switch(get_bits(ins, 6, 5)) {
-                case 0:
+                case LSL:
                     offset = offset << shift_imm;
                     break;
-                case 1:
+                case LSR:
                     if (shift_imm == 0) {
                         offset = 0;
                     }
@@ -59,10 +59,10 @@ int arm_load_store(arm_core p, uint32_t ins) {
                         offset = offset >> shift_imm;
                     }
                     break;
-                case 2:
+                case ASR:
                     offset = asr(offset, shift_imm);
                     break;
-                case 3:
+                case ROR:
                     offset = ror(offset, shift_imm);
                     break;
             }
@@ -75,7 +75,10 @@ int arm_load_store(arm_core p, uint32_t ins) {
     offset = bit_add ? offset : -offset;
 
     if (bit_P) {
-        base_address = base_address + offset;
+        if (!bit_W && rn == 15) {
+            base_address += 8;
+        }
+        base_address += offset;
     }
 
     if (bit_load) { // load
@@ -115,15 +118,15 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     uint8_t bit_before = get_bit(ins, 24); // bit P
 
     uint8_t rn = get_bits(ins, 19, 16);
-    uint16_t register_list = get_bits(ins, 15, 0);
+    uint16_t register_list = get_bits(ins, 14, 0);
     uint32_t base_address = arm_read_register(p, rn);
     uint32_t write_back_value = base_address;
 
     uint32_t value = 0;
     int8_t number_bit_set = 0;
-    uint8_t registers_tab[16] = {-1};
+    uint8_t registers_tab[15] = {-1};
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 15; i++) {
         if (get_bit(register_list, i)) {
             registers_tab[number_bit_set] = i;
             number_bit_set++;
@@ -146,6 +149,12 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
             arm_write_word(p, base_address + 4 * i, value);
         }
         i++;
+    }
+
+    if (get_bit(ins, 15) && bit_load) {
+        arm_read_word(p, base_address + 4 * i, &value);
+        arm_write_register(p, 15, (value & 0xFFFFFFFE));
+        // T bit = value[0] --> CPSR !!
     }
     
     if (bit_write_back) {
@@ -189,6 +198,9 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
     offset = bit_add ? offset : -offset;
 
     if (bit_P) {
+        if (!bit_W && rn == 15) {
+            base_address += 8;
+        }
         base_address += offset; 
     }
 
