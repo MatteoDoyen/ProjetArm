@@ -28,7 +28,7 @@ COMMON=csapp.h csapp.c scanner.h scanner.l debug.h debug.c \
        arm_data_processing.h arm_data_processing.c \
        arm_load_store.h arm_load_store.c \
        arm_branch_other.h arm_branch_other.c \
-       arm_utils.h arm_utils.c
+	arm_utils.h arm_utils.c
 
 arm_simulator_SOURCES=$(COMMON) arm_simulator.c
 

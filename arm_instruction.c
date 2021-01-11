@@ -26,42 +26,54 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_load_store.h"
 #include "arm_branch_other.h"
 #include "arm_constants.h"
+#include "arm_utils.h"
 #include "util.h"
 #include <assert.h>
+#include "debug.h"
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
-    assert(arm_fetch(p,&val_inst));
 
+    int result_value = arm_fetch(p,&val_inst);
+
+    // check if result_value has no exceptions
+    if (result_value == EXCEPTION)
+    {
+      return EXCEPTION;
+    }
+
+    uint8_t cond_field = get_bits(val_inst, 31, 28);
     uint8_t bits_avant_cond = get_bits(val_inst,27,25);
     uint8_t debut_opcode = get_bits(val_inst,24,23);
     uint8_t bit_s = get_bit(val_inst,20);
-    uint8_t bit_vingt_quatre = get_bit(val_inst,24);
     uint8_t bit_quatre = get_bit(val_inst,4);
-<<<<<<< HEAD
 
-=======
->>>>>>> arm_load_store
+    int result_condition = arm_check_condition(p, cond_field);
+
+    if (result_condition == UNPASSED)
+    {
+        return EXCEPTION;
+    }
+
     switch (bits_avant_cond) {
       case 0:
-
         if(bit_quatre==0)
         {
           //Miscellaneous instructions
           if(debut_opcode==2 && bit_s==0)
           {
-
+            return arm_miscellaneous(p, val_inst);
           }
           // Data processing immediate shift
           else
           {
-            arm_data_processing_shift(p, val_inst);
+            return arm_data_processing_shift(p, val_inst);
           }
         }
         // Data processing register shift
         else
         {
-          arm_data_processing_shift(p, val_inst);
+          return arm_data_processing_shift(p, val_inst);
         }
         break;
       case 1:
@@ -73,33 +85,37 @@ static int arm_execute_instruction(arm_core p) {
         // data processing immediate
         else
         {
-          arm_data_processing_immediate_msr(p, val_inst);
+          debug("data MSR immediate \n");
+          return arm_data_processing_immediate_msr(p, val_inst);
         }
         break;
       case 2:
         // load store immediate offset
-        arm_load_store(p, val_inst);
+        return arm_load_store(p, val_inst);
         break;
       case 3:
         // Load/Store register offset
-        arm_load_store(p, val_inst);
+        return arm_load_store(p, val_inst);
+        break;
+      case 4:
+        return arm_load_store_multiple(p, val_inst);
         break;
       case 5:
         // Branch and branch with link
-        arm_branch(p, val_inst);
+        return arm_branch(p, val_inst);
+        break;
+      case 6:
+        return arm_coprocessor_load_store(p, val_inst);
         break;
       case 7:
         // Software interrupt
-        if(bit_vingt_quatre == 1)
-        {
-          return SOFTWARE_INTERRUPT;
-        }
+        return arm_coprocessor_others_swi(p, val_inst);
         break;
       default:
+        return UNDEFINED_INSTRUCTION;
         break;
     }
 
-    return val_inst;
 }
 
 int arm_step(arm_core p) {
