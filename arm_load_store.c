@@ -25,9 +25,10 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 #include "debug.h"
-// TODO : changer valeur de retour et rajouter modification CPSR l.157
+// TODO : rajouter modification CPSR l.157
 int arm_load_store(arm_core p, uint32_t ins) {
 
+    int success = 1;
     uint8_t bit_register_offset = get_bit(ins, 25); // bit I
     uint8_t bit_load = get_bit(ins, 20); // bit L
     uint8_t bit_byte = get_bit(ins, 22); // bit B
@@ -101,12 +102,12 @@ int arm_load_store(arm_core p, uint32_t ins) {
         debug("load\n");
         if (bit_byte) {
             uint8_t byte = 0;
-            arm_read_byte(p, base_address, &byte);
+            success = success && !arm_read_byte(p, base_address, &byte);
             debug("byte: %d\n", byte);
             arm_write_register(p, rd, byte);
         }
         else {
-            arm_read_word(p, base_address, &value);
+            success = success && !arm_read_word(p, base_address, &value);
             debug("word: %d\n", value);
             arm_write_register(p, rd, value);
         }
@@ -116,11 +117,11 @@ int arm_load_store(arm_core p, uint32_t ins) {
         value = arm_read_register(p, rd);
         if (bit_byte) {
             debug("byte\n");
-            arm_write_byte(p, base_address, (uint8_t)value);
+            success = success && !arm_write_byte(p, base_address, (uint8_t)value);
         }
         else {
             debug("word\n");
-            arm_write_word(p, base_address, value);
+            success = success && !arm_write_word(p, base_address, value);
         }
     }
 
@@ -132,11 +133,12 @@ int arm_load_store(arm_core p, uint32_t ins) {
     
     debug("--------------------------------------\n");
 
-    return UNDEFINED_INSTRUCTION;
+    return success - 1;
 }
 // bit S ne peut pas être à 1 pour LDM(1) et STM(1)
 int arm_load_store_multiple(arm_core p, uint32_t ins) {
 
+    int success = 1;
     uint8_t bit_load = get_bit(ins, 20); // bit L
     uint8_t bit_write_back = get_bit(ins, 21); // bit W
     uint8_t bit_increment = get_bit(ins, 23); // bit U
@@ -170,12 +172,12 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     int i = 0;
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
-            arm_read_word(p, base_address + 4 * i, &value);
+            success = success && !arm_read_word(p, base_address + 4 * i, &value);
             arm_write_register(p, i, value);
         }
         else { // store
             value = arm_read_register(p, i);
-            arm_write_word(p, base_address + 4 * i, value);
+            success = success && !arm_write_word(p, base_address + 4 * i, value);
         }
         i++;
     }
@@ -193,7 +195,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     
     debug("--------------------------------------\n");
 
-    return UNDEFINED_INSTRUCTION;
+    return success - 1;
 }
 
 int arm_extra_load_store(arm_core p, uint32_t ins) {
@@ -208,6 +210,7 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
 
     debug("halfword\n");
 
+    int success = 1;
     uint8_t bit_P = get_bit(ins, 24);
     uint8_t bit_add = get_bit(ins, 23);
     uint8_t bit_immediate = get_bit(ins, 22);
@@ -251,14 +254,14 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
     if (bit_load) { // load
         debug("load\n");
         uint16_t temp = 0;
-        arm_read_half(p, base_address, &temp);
+        success = success && !arm_read_half(p, base_address, &temp);
         value |= temp;
         arm_write_register(p, rd, value);
     }
     else { // store
         debug("store\n");
         value |= arm_read_register(p, rd);
-        arm_write_word(p, base_address, value);
+        success = success && !arm_write_word(p, base_address, value);
     }
 
     if (bit_P == bit_W) {
@@ -270,7 +273,7 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
 
     debug("--------------------------------------\n");
 
-    return UNDEFINED_INSTRUCTION;
+    return success - 1;
 }
 
 int arm_coprocessor_load_store(arm_core p, uint32_t ins) {
