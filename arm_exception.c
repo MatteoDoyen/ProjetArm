@@ -30,11 +30,146 @@ Contact: Guillaume.Huard@imag.fr
 
 #define Exception_bit_9 (CP15_reg1_EEbit << 9)
 
+#define High_vector_address_type 0
+#define High_vector_address 0xFFFF0000
+#define Normal_vector_address 0x00000000
+
+#define reset_mask 0x1d3
+#define undefined_mask 0x9b
+#define software_interrupt_mask 0x93
+#define prefetch_abort_data_abort_mask 0x197
+#define interrupt_mask 0x1a2
+#define fast_interrupt_mask 0x1d1
+
+static void vector_address_type(arm_core p, int8_t address) {
+	uint32_t address_32_bit = address;
+
+	if (High_vector_address_type)
+	{
+		address_32_bit |= High_vector_address;
+		arm_write_register(p, 15, address_32_bit);
+		return;
+	}
+	address_32_bit |= Normal_vector_address;
+	arm_write_register(p, 15, address_32_bit);
+}
+
+static int current_instruction_address(arm_core p)
+{
+	// in ARM mode the PC is two instructions ahead of the current instruction
+	// We substract 8 to the pc value to get the current instruction
+	return arm_read_register(p, 15) - 8;
+}
+
+static int next_instruction_address(arm_core p)
+{
+	// in ARM mode the PC is two instructions ahead of the current instruction
+	// We substract 4 to the pc value to get the next instruction
+	return arm_read_register(p, 15) - 4;
+}
+
+static void reset_exception(arm_core p, uint32_t cpsr) {
+	arm_write_cpsr(p, reset_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
+	// write pc address
+	vector_address_type(p, 0x0000);
+}
+
+static void undefined_exception(arm_core p, uint32_t cpsr) {
+	arm_write_cpsr(p, undefined_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
+	arm_write_spsr(p, cpsr); // save cpsr in spsr_und
+	arm_write_register(p, 14, next_instruction_address(p));
+
+	// write pc address
+	vector_address_type(p, 0x0004);
+}
+
+static void software_interrupt_exception(arm_core p, uint32_t cpsr) {
+	arm_write_cpsr(p, software_interrupt_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
+	arm_write_spsr(p, cpsr);
+	arm_write_register(p, 14, next_instruction_address(p));
+
+	// write pc address
+	vector_address_type(p, 0x0008);
+}
+
+static void prefetch_abort_exception(arm_core p, uint32_t cpsr) {
+	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
+	arm_write_spsr(p, cpsr);
+	arm_write_register(p, 14, current_instruction_address(p) + 4); // replace by next_instructions() ?
+
+	// write pc address
+	vector_address_type(p, 0x000C);
+}
+
+static void data_abort_exception(arm_core p, uint32_t cpsr) {
+	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
+	arm_write_spsr(p, cpsr);
+	arm_write_register(p, 14, current_instruction_address(p) + 8); // replace by PC's value ?
+
+	// write pc address
+	vector_address_type(p, 0x0010);
+}
+
+static void irq_exception(arm_core p, uint32_t cpsr) {
+
+	// if IRQ are disabled
+	if (get_bit(cpsr, 7)) 
+	{
+		return;
+	}
+
+	arm_write_cpsr(p, interrupt_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
+	arm_write_spsr(p, cpsr);
+	arm_write_register(p, 14, next_instruction_address(p) + 4); // replace by PC's value ?
+
+	// write pc address
+	vector_address_type(p, 0x0018);
+}
+
+static void fast_interrupt_exception(arm_core p, uint32_t cpsr) {
+
+	// if FIQ are disabled
+	if (get_bit(cpsr, 6)) 
+	{
+		return;
+	}
+
+	arm_write_cpsr(p, fast_interrupt_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
+	arm_write_spsr(p, cpsr);
+	arm_write_register(p, 14, next_instruction_address(p) + 4); // replace by PC's value ?
+
+	// write pc address
+	vector_address_type(p, 0x001C);
+}
+
+
+
 void arm_exception(arm_core p, unsigned char exception) {
-    /* We only support RESET initially */
-    /* Semantics of reset interrupt (ARM manual A2-18) */
-    if (exception == RESET) {
-        arm_write_cpsr(p, 0x1d3 | Exception_bit_9);
-	arm_write_usr_register(p, 15, 0);
-    }
+
+	uint32_t old_cpsr = arm_read_cpsr(p);
+
+	switch (exception) {
+		case RESET:
+			reset_exception(p, old_cpsr);
+			break;
+		case UNDEFINED_INSTRUCTION:
+			undefined_exception(p, old_cpsr);
+			break;
+		case SOFTWARE_INTERRUPT:
+			software_interrupt_exception(p, old_cpsr);
+			break;
+		case PREFETCH_ABORT:
+			prefetch_abort_exception(p, old_cpsr);
+			break;
+		case DATA_ABORT:
+			data_abort_exception(p, old_cpsr);
+			break;
+		case INTERRUPT:
+			irq_exception(p, old_cpsr);
+			break;
+		case FAST_INTERRUPT:
+			fast_interrupt_exception(p, old_cpsr);
+			break;
+
+	}
 }
