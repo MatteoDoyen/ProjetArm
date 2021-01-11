@@ -29,42 +29,38 @@ Contact: Guillaume.Huard@imag.fr
 
 int arm_branch(arm_core p, uint32_t ins)
 {
-    if (arm_check_condition(p, (uint8_t) get_bits(ins, 31, 28)) == PASSED) {
-        int32_t address = get_bits(ins, 23, 0);
-        int32_t pc = arm_read_register(p, 15);
+    int32_t address = get_bits(ins, 23, 0);
+    int32_t pc = arm_read_register(p, 15);
 
         // On teste si le bit de poids fort est négatif
         // S'il est négatif, on étend l'adresse sur 30 bits avec des 1
-        int negatif = get_bit(address, 23);
-        if (negatif) {
-            address = 0x3F000000 | address;
-        } else {
-            address = 0x00000000 | address;
-        }
+    int negatif = get_bit(address, 23);
+    if (negatif) {
+        address = 0x3F000000 | address;
+    } else {
+        address = 0x00000000 | address;
+    }
 
         // Le decalage de deux bits à gauche permet de multiplier la valeur par 4
-        address = address << 2;
+    address = address << 2;
         // Complément à 1
-        address = ~address;
+    address = ~address;
         // Complément à 2
-        address = address + 1;
+    address = address + 1;
 
-        int L = get_bit(ins, 24);
-        if (L)
-        {
-            arm_write_register(p, 14, pc);
-        }
+    int L = get_bit(ins, 24);
+    if (L)
+    {
+        arm_write_register(p, 14, pc);
+    }
 
-        if (negatif)
-        {
-            arm_write_register(p, 15, pc - address);
-        }
-        else
-        {
-            arm_write_register(p, 15, pc + address);
-        }
-        
-        return 1;
+    if (negatif)
+    {
+        arm_write_register(p, 15, pc - address);
+    }
+    else
+    {
+        arm_write_register(p, 15, pc + address);
     }
 
     return 0;
@@ -84,26 +80,24 @@ int arm_coprocessor_others_swi(arm_core p, uint32_t ins)
 
 int arm_miscellaneous(arm_core p, uint32_t ins)
 {
-    if (arm_check_condition(p, (uint8_t) get_bits(ins, 31, 28)) == PASSED) {
-        int reg = get_bits(ins, 15, 12);
-        if (reg == 15)
+    int reg = get_bits(ins, 15, 12);
+    if (reg == 15)
+    {
+        return -1;
+    } 
+    else 
+    {
+        int R = get_bit(ins, 22);
+        if (R)
         {
-            return 0;
-        } 
-        else 
-        {
-            int R = get_bit(ins, 22);
-            if (R)
-            {
-                arm_write_register(p, reg, arm_read_spsr(p));
-            }
-            else
-            {
-                arm_write_register(p, reg, arm_read_cpsr(p));
-            }
-            return 1;
+            arm_write_register(p, reg, arm_read_spsr(p));
         }
+        else
+        {
+            arm_write_register(p, reg, arm_read_cpsr(p));
+        }
+        return 0;
     }
 
-    return 0;
+    return -1;
 }
