@@ -30,7 +30,7 @@ Contact: Guillaume.Huard@imag.fr
 int arm_branch(arm_core p, uint32_t ins)
 {
     int32_t address = get_bits(ins, 23, 0);
-    int32_t pc = arm_read_register(p, 15);
+    uint32_t pc = arm_read_register(p, 15);
 
         // On teste si le bit de poids fort est négatif
         // S'il est négatif, on étend l'adresse sur 30 bits avec des 1
@@ -51,7 +51,7 @@ int arm_branch(arm_core p, uint32_t ins)
     int L = get_bit(ins, 24);
     if (L)
     {
-        arm_write_register(p, 14, pc);
+        arm_write_register(p, 14, pc - 4);
     }
 
     if (negatif)
