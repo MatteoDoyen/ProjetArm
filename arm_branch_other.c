@@ -80,24 +80,70 @@ int arm_coprocessor_others_swi(arm_core p, uint32_t ins)
 
 int arm_miscellaneous(arm_core p, uint32_t ins)
 {
-    int reg = get_bits(ins, 15, 12);
-    if (reg == 15)
-    {
-        return -1;
-    } 
-    else 
-    {
-        int R = get_bit(ins, 22);
-        if (R)
-        {
-            arm_write_register(p, reg, arm_read_spsr(p));
+    if (get_bit(ins, 21)) {
+        // MSR
+        uint32_t operand = 0;
+        if (get_bit(ins, 25)) {
+            int8_t immediate = get_bits(ins, 7, 0);
+            int8_t rotate_imm = get_bits(ins, 11, 8);
+            operand = ror(immediate, (rotate_imm << 1));
+        } else {
+            uint8_t rm = get_bits(ins, 3, 0);
+            operand = arm_read_register(p, rm);
         }
-        else
-        {
-            arm_write_register(p, reg, arm_read_cpsr(p));
-        }
-        return 0;
-    }
 
-    return -1;
+        if ((operand & UnallocMask) != 0) {
+            return -1;
+        }
+
+        uint32_t mask = 0;
+        uint32_t byte_mask = (get_bit(ins, 16) ? 0x000000FF : 0) |
+                             (get_bit(ins, 17) ? 0x0000FF00 : 0) |
+                             (get_bit(ins, 18) ? 0x00FF0000 : 0) |
+                             (get_bit(ins, 19) ? 0xFF000000 : 0);
+
+        if (!get_bit(ins, 22)) {
+            if (arm_in_a_privileged_mode(p)) {
+                if ((operand & StateMask) != 0) {
+                    return -1;
+                } else {
+                    mask = byte_mask & (UserMask | PrivMask);
+                }
+            } else {
+                mask = byte_mask & UserMask;
+            }
+            arm_write_cpsr(p, (arm_read_cpsr(p) & ~mask) | (operand & mask));
+        } else {
+            if (arm_current_mode_has_spsr(p)) {
+                mask = byte_mask & (UserMask | PrivMask | StateMask);
+                arm_write_spsr(p, (arm_read_spsr(p) & ~mask) | (operand & mask));
+            } else {
+                return -1;
+            }
+        }
+
+        return 0;
+    } else {
+        // MRS
+        int reg = get_bits(ins, 15, 12);
+        if (reg == 15)
+        {
+            return -1;
+        } 
+        else 
+        {
+            int R = get_bit(ins, 22);
+            if (R)
+            {
+                arm_write_register(p, reg, arm_read_spsr(p));
+            }
+            else
+            {
+                arm_write_register(p, reg, arm_read_cpsr(p));
+            }
+            return 0;
+        }
+
+        return -1;
+    }
 }
