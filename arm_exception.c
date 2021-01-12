@@ -1,24 +1,24 @@
 /*
-Armator - simulateur de jeu d'instruction ARMv5T à but pédagogique
+Armator - simulateur de jeu d'instruction ARMv5T ï¿½ but pï¿½dagogique
 Copyright (C) 2011 Guillaume Huard
 Ce programme est libre, vous pouvez le redistribuer et/ou le modifier selon les
-termes de la Licence Publique Générale GNU publiée par la Free Software
-Foundation (version 2 ou bien toute autre version ultérieure choisie par vous).
+termes de la Licence Publique Gï¿½nï¿½rale GNU publiï¿½e par la Free Software
+Foundation (version 2 ou bien toute autre version ultï¿½rieure choisie par vous).
 
-Ce programme est distribué car potentiellement utile, mais SANS AUCUNE
+Ce programme est distribuï¿½ car potentiellement utile, mais SANS AUCUNE
 GARANTIE, ni explicite ni implicite, y compris les garanties de
-commercialisation ou d'adaptation dans un but spécifique. Reportez-vous à la
-Licence Publique Générale GNU pour plus de détails.
+commercialisation ou d'adaptation dans un but spï¿½cifique. Reportez-vous ï¿½ la
+Licence Publique Gï¿½nï¿½rale GNU pour plus de dï¿½tails.
 
-Vous devez avoir reçu une copie de la Licence Publique Générale GNU en même
-temps que ce programme ; si ce n'est pas le cas, écrivez à la Free Software
+Vous devez avoir reï¿½u une copie de la Licence Publique Gï¿½nï¿½rale GNU en mï¿½me
+temps que ce programme ; si ce n'est pas le cas, ï¿½crivez ï¿½ la Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307,
-États-Unis.
+ï¿½tats-Unis.
 
 Contact: Guillaume.Huard@imag.fr
-	 Bâtiment IMAG
+	 Bï¿½timent IMAG
 	 700 avenue centrale, domaine universitaire
-	 38401 Saint Martin d'Hères
+	 38401 Saint Martin d'Hï¿½res
 */
 #include "arm_exception.h"
 #include "arm_constants.h"
@@ -75,8 +75,8 @@ static void reset_exception(arm_core p, uint32_t cpsr) {
 }
 
 static void undefined_exception(arm_core p, uint32_t cpsr) {
-	arm_write_cpsr(p, undefined_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
 	arm_write_spsr(p, cpsr); // save cpsr in spsr_und
+	arm_write_cpsr(p, undefined_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
 	arm_write_register(p, 14, next_instruction_address(p));
 
 	// write pc address
@@ -84,8 +84,8 @@ static void undefined_exception(arm_core p, uint32_t cpsr) {
 }
 
 static void software_interrupt_exception(arm_core p, uint32_t cpsr) {
-	arm_write_cpsr(p, software_interrupt_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
 	arm_write_spsr(p, cpsr);
+	arm_write_cpsr(p, software_interrupt_mask | (cpsr & 0xFFFFFD40) | Exception_bit_9);
 	arm_write_register(p, 14, next_instruction_address(p));
 
 	// write pc address
@@ -93,8 +93,8 @@ static void software_interrupt_exception(arm_core p, uint32_t cpsr) {
 }
 
 static void prefetch_abort_exception(arm_core p, uint32_t cpsr) {
-	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_spsr(p, cpsr);
+	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_register(p, 14, current_instruction_address(p) + 4); // replace by next_instructions() ?
 
 	// write pc address
@@ -102,8 +102,8 @@ static void prefetch_abort_exception(arm_core p, uint32_t cpsr) {
 }
 
 static void data_abort_exception(arm_core p, uint32_t cpsr) {
-	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_spsr(p, cpsr);
+	arm_write_cpsr(p, prefetch_abort_data_abort_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_register(p, 14, current_instruction_address(p) + 8); // replace by PC's value ?
 
 	// write pc address
@@ -113,13 +113,12 @@ static void data_abort_exception(arm_core p, uint32_t cpsr) {
 static void irq_exception(arm_core p, uint32_t cpsr) {
 
 	// if IRQ are disabled
-	if (get_bit(cpsr, 7)) 
+	if (get_bit(cpsr, 7))
 	{
 		return;
 	}
-
-	arm_write_cpsr(p, interrupt_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_spsr(p, cpsr);
+	arm_write_cpsr(p, interrupt_mask | (cpsr & 0xFFFFFC40) | Exception_bit_9);
 	arm_write_register(p, 14, next_instruction_address(p) + 4); // replace by PC's value ?
 
 	// write pc address
@@ -129,13 +128,13 @@ static void irq_exception(arm_core p, uint32_t cpsr) {
 static void fast_interrupt_exception(arm_core p, uint32_t cpsr) {
 
 	// if FIQ are disabled
-	if (get_bit(cpsr, 6)) 
+	if (get_bit(cpsr, 6))
 	{
 		return;
 	}
 
-	arm_write_cpsr(p, fast_interrupt_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
 	arm_write_spsr(p, cpsr);
+	arm_write_cpsr(p, fast_interrupt_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
 	arm_write_register(p, 14, next_instruction_address(p) + 4); // replace by PC's value ?
 
 	// write pc address
