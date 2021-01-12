@@ -178,7 +178,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
-            if (registers_tab == 15) {
+            if (registers_tab[i] == 15) {
                 uint32_t cpsr_value = clr_bit(arm_read_cpsr(p), 0) | get_bit(value, 0);
                 arm_write_cpsr(p, cpsr_value);
                 value &= 0xFFFFFFFE;
