@@ -25,7 +25,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 #include "debug.h"
-// TODO : rajouter modification CPSR l.157
+
 int arm_load_store(arm_core p, uint32_t ins) {
 
     int success = 1;
@@ -108,6 +108,11 @@ int arm_load_store(arm_core p, uint32_t ins) {
         }
         else {
             success = success && !arm_read_word(p, base_address, &value);
+            if (rd == 15) {
+                uint32_t cpsr_value = clr_bit(arm_read_cpsr(p), 0) | get_bit(value, 0);
+                arm_write_cpsr(p, cpsr_value);
+                value &= 0xFFFFFFFE;
+            }
             debug("word: %d\n", value);
             arm_write_register(p, rd, value);
         }
@@ -151,11 +156,11 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
 
     uint32_t value = 0;
     int8_t number_bit_set = 0;
-    int8_t registers_tab[15] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int8_t registers_tab[16] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
     debug("RN: %d, base address: 0x%x\n", rn, base_address);
 
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 16; i++) {
         if (get_bit(register_list, i)) {
             registers_tab[number_bit_set] = i;
             number_bit_set++;
@@ -173,6 +178,11 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
+            if (registers_tab == 15) {
+                uint32_t cpsr_value = clr_bit(arm_read_cpsr(p), 0) | get_bit(value, 0);
+                arm_write_cpsr(p, cpsr_value);
+                value &= 0xFFFFFFFE;
+            }
             arm_write_register(p, i, value);
         }
         else { // store
@@ -180,12 +190,6 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
             success = success && !arm_write_word(p, base_address + 4 * i, value);
         }
         i++;
-    }
-
-    if (get_bit(ins, 15) && bit_load) {
-        arm_read_word(p, base_address + 4 * i, &value);
-        arm_write_register(p, 15, (value & 0xFFFFFFFE));
-        // T bit = value[0] --> CPSR !!
     }
     
     if (bit_write_back) {
