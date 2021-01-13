@@ -26,11 +26,13 @@ Contact: Guillaume.Huard@imag.fr
 #include <limits.h>
 #include "util.h"
 #include "arm_core.h"
+#include "debug.h"
 
 
 static inline int borrow_from(uint32_t operand_a, uint32_t operand_b)
 {
-	return (operand_a - operand_b) < 0;
+	debug("operand_a : %x, operand_b : %x, result: %d\n", operand_a, operand_b, operand_a - operand_b);
+	return ((int) (operand_a - operand_b)) < 0;
 }
 
 // manual page 1131 "OverflowFrom" function
@@ -49,7 +51,7 @@ static inline int overflow_from(uint32_t operand_a, uint32_t operand_b, uint64_t
 
 // manual page 1124 "CarryFrom" function
 static inline int carry_from(uint32_t result) {
-	return result > UINT_MAX;
+	return ((int) result) > UINT_MAX;
 }
 
 int arm_data_processing_shift(arm_core p, uint32_t ins);
