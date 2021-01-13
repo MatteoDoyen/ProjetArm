@@ -45,7 +45,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 
 	uint32_t second_operand, result_value;
 
-	uint8_t shift_amount, shift_type, shift_carry;
+	uint8_t shift_amount, shift_type,shift_carry;
+	shift_carry = 0;
 
 	if (immediate_shift == 0)
 	{
@@ -67,7 +68,7 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			uint8_t register_shift_number = get_bits(ins,11,8);
 			shift_amount = arm_read_register(p, register_shift_number);
 		}
-
+		debug("DATA Processing : shift amount : %d et %u",shift_amount,shift_amount);
 		second_operand = arm_decode_shift(p, shift_type, second_operand, shift_amount, &shift_carry, immediate_shift);
 	}
 	else

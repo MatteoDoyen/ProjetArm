@@ -28,14 +28,13 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_core.h"
 #include "debug.h"
 
-
+// see manual page 1123 "borrow_from" function
 static inline int borrow_from(uint32_t operand_a, uint32_t operand_b)
 {
-	debug("operand_a : %x, operand_b : %x, result: %d\n", operand_a, operand_b, operand_a - operand_b);
 	return ((int) (operand_a - operand_b)) < 0;
 }
 
-// manual page 1131 "OverflowFrom" function
+// see manual page 1131 "OverflowFrom" function
 static inline int overflow_from(uint32_t operand_a, uint32_t operand_b, uint64_t result, uint8_t op_type) {
 	// if op_type is an addition
 	if (op_type)
@@ -49,9 +48,9 @@ static inline int overflow_from(uint32_t operand_a, uint32_t operand_b, uint64_t
 		&& get_bit(operand_a, 31) != get_bit(result, 31);
 }
 
-// manual page 1124 "CarryFrom" function
+// see manual page 1124 "CarryFrom" function
 static inline int carry_from(uint32_t result) {
-	return ((int) result) > UINT_MAX;
+	return ((int) result) > (UINT_MAX -1);
 }
 
 int arm_data_processing_shift(arm_core p, uint32_t ins);
