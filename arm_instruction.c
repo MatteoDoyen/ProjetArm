@@ -73,6 +73,9 @@ static int arm_execute_instruction(arm_core p) {
         // Data processing register shift
         else
         {
+          if (get_bit(val_inst, 7)) {
+            return arm_extra_load_store(p, val_inst);
+          }
           return arm_data_processing_shift(p, val_inst);
         }
         break;
