@@ -80,10 +80,7 @@ uint32_t read_register(registers r, uint8_t reg) {
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
     assert(reg<17);
-    debug("read_usr_register \n");
-    int8_t num_rg = matriceReg[get_mode(r)][reg];
-    assert(num_rg>=0);
-    return r->reg[num_rg];
+    return r->reg[reg];
 }
 
 uint32_t read_cpsr(registers r) {
@@ -105,6 +102,10 @@ void write_register(registers r, uint8_t reg, uint32_t value) {
     debug("write_register \n");
     debug("reg : %d\n", reg);
     debug("mode : %d\n", get_mode(r));
+    if(get_mode(r)== USR)
+    {
+      write_usr_register(r,reg,value);
+    }
     int8_t num_rg = matriceReg[get_mode(r)][reg];
     assert(num_rg>=0);
     r->reg[num_rg] = value;
@@ -112,9 +113,9 @@ void write_register(registers r, uint8_t reg, uint32_t value) {
 }
 
 void write_usr_register(registers r, uint8_t reg, uint32_t value) {
-  assert(get_mode(r) == USR);
+  assert(reg<17);
+  r->reg[reg] = value;
   debug("write_usr_register \n");
-  write_register(r,reg,value);
 }
 
 void write_cpsr(registers r, uint32_t value) {
