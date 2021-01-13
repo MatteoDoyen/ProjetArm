@@ -41,7 +41,7 @@ arm_core arm_create(memory mem) {
     p = malloc(sizeof(struct arm_core_data));
     if (p) {
         p->mem = mem;
-	p->reg = registers_create();
+	    p->reg = registers_create();
         arm_exception(p, RESET);
         p->cycle_count = 0;
     }

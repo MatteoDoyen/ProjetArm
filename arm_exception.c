@@ -24,6 +24,8 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "arm_core.h"
 #include "util.h"
+#include "debug.h"
+#include <stdlib.h>
 
 // Not supported below ARMv6, should read as 0
 #define CP15_reg1_EEbit 0
@@ -69,6 +71,7 @@ static int next_instruction_address(arm_core p)
 }
 
 static void reset_exception(arm_core p, uint32_t cpsr) {
+	debug("false exc\n");
 	arm_write_cpsr(p, reset_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
 	// write pc address
 	vector_address_type(p, 0x0000);
@@ -147,28 +150,37 @@ void arm_exception(arm_core p, unsigned char exception) {
 
 	uint32_t old_cpsr = arm_read_cpsr(p);
 
+	debug("old cpsr : %x\n", old_cpsr);
+	debug("enter exceptions : %d\n", exception);
+
 	switch (exception) {
 		case RESET:
+			debug("RESET exception\n");
 			reset_exception(p, old_cpsr);
 			break;
 		case UNDEFINED_INSTRUCTION:
+			debug("UND exception\n");
 			undefined_exception(p, old_cpsr);
 			break;
 		case SOFTWARE_INTERRUPT:
+			debug("SOFTWARE_INTERRUPT exception\n");
 			software_interrupt_exception(p, old_cpsr);
 			break;
 		case PREFETCH_ABORT:
+			debug("PREFETCH_ABORT exception\n");
 			prefetch_abort_exception(p, old_cpsr);
 			break;
 		case DATA_ABORT:
+			debug("DATA_ABORT exception\n");
 			data_abort_exception(p, old_cpsr);
 			break;
 		case INTERRUPT:
+			debug("INTERRUPT exception\n");
 			irq_exception(p, old_cpsr);
 			break;
 		case FAST_INTERRUPT:
+			debug("FAST_INTERRUPT exception\n");
 			fast_interrupt_exception(p, old_cpsr);
 			break;
-
 	}
 }

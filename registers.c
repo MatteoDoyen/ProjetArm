@@ -24,10 +24,11 @@ Contact: Guillaume.Huard@imag.fr
 #include <assert.h>
 #include "arm_constants.h"
 #include <stdlib.h>
+#include "debug.h"
+#include <stdio.h>
 
 struct registers_data {
   uint32_t reg[37];
-  uint8_t mode;
 };
 
 int8_t matriceReg[32][18] = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},
@@ -45,7 +46,7 @@ int8_t matriceReg[32][18] = {{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},
 registers registers_create() {
     registers r = NULL;
     r = malloc(sizeof(struct registers_data));
-    r->mode = USR;
+    debug("create\n");
     return r;
 }
 
@@ -54,60 +55,75 @@ void registers_destroy(registers r) {
 }
 
 uint8_t get_mode(registers r) {
-    return r->mode;
+    debug("get mode \n");
+    return (read_cpsr(r) & 0x1F);
 }
 
 int current_mode_has_spsr(registers r) {
-    return (get_mode(r)!= USR && get_mode(r)!=SYS);
+    uint8_t mode = get_mode(r);
+    debug("current mode has spsr \n");
+    return (mode!= USR && mode!=SYS);
 }
 
 int in_a_privileged_mode(registers r) {
+    debug("in_a_privileged_mode \n");
     return get_mode(r)!=USR;
 }
 
 uint32_t read_register(registers r, uint8_t reg) {
-    assert(reg<37);
-    int8_t num_rg = matriceReg[r->mode][reg];
+    assert(reg<18);
+    debug("read_register \n");
+    int8_t num_rg = matriceReg[get_mode(r)][reg];
     assert(num_rg>=0);
     return r->reg[num_rg];
 }
 
 uint32_t read_usr_register(registers r, uint8_t reg) {
-    assert(!in_a_privileged_mode(r));
-    int8_t num_rg = matriceReg[r->mode][reg];
+    assert(reg<17);
+    debug("read_usr_register \n");
+    int8_t num_rg = matriceReg[get_mode(r)][reg];
     assert(num_rg>=0);
     return r->reg[num_rg];
 }
 
 uint32_t read_cpsr(registers r) {
     uint32_t value=r->reg[16];
+    debug("cpsr read : %x\n", value);
     return value;
 }
 
 uint32_t read_spsr(registers r) {
     assert(current_mode_has_spsr(r));
-    int8_t num_rg = matriceReg[r->mode][17];
+     debug("read_spsr \n");
+    int8_t num_rg = matriceReg[get_mode(r)][17];
     assert(num_rg>=0);
     return r->reg[num_rg];
 }
 
 void write_register(registers r, uint8_t reg, uint32_t value) {
-    assert(reg<37);
-    int8_t num_rg = matriceReg[r->mode][reg];
+    assert(reg<18);
+    debug("write_register \n");
+    debug("reg : %d\n", reg);
+    debug("mode : %d\n", get_mode(r));
+    int8_t num_rg = matriceReg[get_mode(r)][reg];
     assert(num_rg>=0);
     r->reg[num_rg] = value;
+    debug("num_rg : %d, value : %x\n", num_rg, value);
 }
 
 void write_usr_register(registers r, uint8_t reg, uint32_t value) {
   assert(get_mode(r) == USR);
+  debug("write_usr_register \n");
   write_register(r,reg,value);
 }
 
 void write_cpsr(registers r, uint32_t value) {
-  write_register(r,16,value);
+  debug("cpsr : %x\n",value);
+  r->reg[16] = value;
 }
 
 void write_spsr(registers r, uint32_t value) {
   assert(current_mode_has_spsr(r));
-  write_usr_register(r,17,value);
+   debug("write_spsr \n");
+  write_register(r,17,value);
 }

@@ -30,15 +30,18 @@ Contact: Guillaume.Huard@imag.fr
 #include "util.h"
 #include <assert.h>
 #include "debug.h"
+#include <stdlib.h>
 
 static int arm_execute_instruction(arm_core p) {
     uint32_t val_inst;
 
     int result_value = arm_fetch(p,&val_inst);
-
+    debug("result value : %d\n", result_value);
+    debug("val inst : %x\n", val_inst);
     // check if result_value has no exceptions
     if (result_value == EXCEPTION)
     {
+      debug("problem fetch\n");
       return EXCEPTION;
     }
 
@@ -52,6 +55,7 @@ static int arm_execute_instruction(arm_core p) {
 
     if (result_condition == UNPASSED)
     {
+        debug("problem flags\n");
         return EXCEPTION;
     }
 
@@ -80,7 +84,7 @@ static int arm_execute_instruction(arm_core p) {
         // UNDEFINED_INSTRUCTION
         if(debut_opcode==2 && bit_s==0)
         {
-          return UNDEFINED_INSTRUCTION;
+          return arm_miscellaneous(p, val_inst);
         }
         // data processing immediate
         else
@@ -122,6 +126,7 @@ int arm_step(arm_core p) {
     int result;
 
     result = arm_execute_instruction(p);
+    debug("result : %d\n", result);
     if (result)
         arm_exception(p, result);
     return result;
