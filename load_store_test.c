@@ -100,7 +100,9 @@ int main() {
     uint32_t base_address = 0x2000;
     arm_write_register(p, 4, 0x2000);
 
-    for (int i = 0; i < 5; i++) {
+    int i = 0
+
+    for (i = 0; i < 5; i++) {
         arm_write_word(p, base_address + 4 * i, 56 * (i + 1));
     }
 
@@ -118,7 +120,7 @@ int main() {
     base_address = 0x2000;
     arm_write_register(p, 4, 0x2000);
 
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         arm_write_word(p, (base_address - 12) + 4 * i, 56 * (i + 1));
     }
 
@@ -141,7 +143,7 @@ int main() {
 
     arm_load_store_multiple(p, 0xe9240083);
 
-    for (int i = 0; i < 3; i++) {
+    for (i = 0; i < 3; i++) {
         arm_read_word(p, (base_address - 12) + 4 * i, &word);
         assert(word == 89 * (i + 1));
     }
