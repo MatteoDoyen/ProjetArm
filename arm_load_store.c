@@ -103,7 +103,6 @@ int arm_load_store(arm_core p, uint32_t ins) {
         if (bit_byte) {
             uint8_t byte = 0;
             success = success && !arm_read_byte(p, base_address, &byte);
-            debug("byte: %d\n", byte);
             arm_write_register(p, rd, byte);
         }
         else {
@@ -162,6 +161,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
 
     for (int i = 0; i < 16; i++) {
         if (get_bit(register_list, i)) {
+            debug("%d\n", i);
             registers_tab[number_bit_set] = i;
             number_bit_set++;
         }
@@ -178,15 +178,16 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
+            
             if (registers_tab[i] == 15) {
                 uint32_t cpsr_value = clr_bit(arm_read_cpsr(p), 0) | get_bit(value, 0);
                 arm_write_cpsr(p, cpsr_value);
                 value &= 0xFFFFFFFE;
             }
-            arm_write_register(p, i, value);
+            arm_write_register(p, registers_tab[i], value);
         }
         else { // store
-            value = arm_read_register(p, i);
+            value = arm_read_register(p, registers_tab[i]);
             success = success && !arm_write_word(p, base_address + 4 * i, value);
         }
         i++;

@@ -14,7 +14,7 @@ if HAVE_ARM_COMPILER
 SUBDIRS=. Examples
 endif
 
-bin_PROGRAMS=arm_simulator send_irq memory_test
+bin_PROGRAMS=arm_simulator send_irq memory_test load_store_test
 
 COMMON=csapp.h csapp.c scanner.h scanner.l debug.h debug.c \
        gdb_protocol.h gdb_protocol.c util.h util.c trace.h trace.c \
@@ -35,5 +35,15 @@ arm_simulator_SOURCES=$(COMMON) arm_simulator.c
 send_irq_SOURCES=send_irq.c csapp.h csapp.c arm_constants.h arm_constants.c
 
 memory_test_SOURCES=memory_test.c memory.h memory.c util.h util.c
+
+load_store_test_SOURCES=load_store_test.c debug.h debug.c \
+       util.h util.c \
+       trace.h trace.c \
+       memory.h memory.c \
+       registers.h registers.c \
+       arm_constants.h arm_constants.c \
+       arm_core.h arm_core.c \
+       arm_exception.h arm_exception.c \
+       arm_load_store.h arm_load_store.c
 
 EXTRA_DIST=gdb_commands make_trace.sh License
