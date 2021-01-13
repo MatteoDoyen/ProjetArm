@@ -25,9 +25,133 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "arm_branch_other.h"
 #include "arm_utils.h"
-#include "debug.h"
 
-static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediate_shift)
+uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry, uint8_t immediate_shift) 
+{
+    uint32_t flags = arm_read_cpsr(p);
+    *shift_carry = get_bit(flags, C);
+    switch (shift_type)
+    {
+        case LSL:
+            if(shift_amount != 0)
+            {
+              if((immediate_shift && shift_amount > 0) || shift_amount < 32 )
+              {
+                operand <<= shift_amount;
+                *shift_carry = get_bit(operand, 32 - shift_amount);
+              }
+              else if (shift_amount == 32)
+              {
+                *shift_carry = get_bit(operand, 0);
+                operand = 0;
+              }
+              else
+              {
+                *shift_carry = 0;
+                operand = 0;
+              }
+            }
+            break;
+        case LSR:
+            if(shift_amount != 0 || (immediate_shift && shift_amount==0))
+            {
+              if (immediate_shift && shift_amount == 0)
+              {
+                  operand = 0;
+                  *shift_carry = get_bit(operand, 31);
+              }
+              else if(immediate_shift || shift_amount < 32)
+              {
+                operand >>= shift_amount;
+                *shift_carry = get_bit(operand,shift_amount-1);
+              }
+              else if (shift_amount == 32)
+              {
+                *shift_carry = get_bit(operand, 31);
+                operand = 0;
+              }
+              else
+              {
+                  *shift_carry = 0;
+                  operand = 0;
+              }
+            }
+            break;
+        case ASR:
+            if(shift_amount != 0 || (immediate_shift && shift_amount==0))
+            {
+              if (shift_amount == 0 && immediate_shift)
+              {
+                  if(get_bit(operand,31) == 0)
+                  {
+                    operand = 0;
+                    *shift_carry = get_bit(operand, 31);
+                  }
+                  else
+                  {
+                    operand = 0xFFFFFFFF;
+                    *shift_carry = get_bit(operand, 31);
+                  }
+              }
+              //if shift_amount > 0 and immediate_shift
+              else if(immediate_shift || shift_amount < 32)
+              {
+                operand = asr(operand, shift_amount);
+                *shift_carry = get_bit(operand,shift_amount-1);
+              }
+              else
+              {
+                  *shift_carry = get_bit(operand, 31);
+                  operand = *shift_carry ? 0xFFFFFFFF : 0x0;
+              }
+            }
+            break;
+        case ROR:
+              if(shift_amount != 0 || (immediate_shift && shift_amount==0))
+              {
+                if (shift_amount == 0 && immediate_shift)
+                {
+                    *shift_carry = get_bit(operand, 0);
+                    operand = (get_bit(flags, C) << N) | (operand >> 1);
+                }
+                else if(immediate_shift)
+                {
+                  operand = ror(operand, shift_amount);
+                  *shift_carry = get_bit(operand, shift_amount-1);
+                }
+                else if(get_bits(shift_amount,4,0) == 0 )
+                {
+                  *shift_carry = get_bit(operand,31);
+                }
+                else
+                {
+                  *shift_carry = get_bit(operand,get_bits(shift_amount,4,0)-1);
+                  operand = ror(operand, get_bits(shift_amount,4,0));
+                }
+              }
+            break;
+    }
+    return operand;
+}
+
+uint8_t arm_check_current_mode_has_spsr(arm_core p, uint8_t S, uint8_t rd_register_number) 
+{
+	if (S && rd_register_number == 15)
+	{
+		if (arm_current_mode_has_spsr(p))
+		{
+			arm_write_cpsr(p, arm_read_spsr(p));
+		}
+		else
+		{
+			//UNPREDICTABLE
+		}
+		return 1;
+	}
+	return 0;
+}
+
+int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediate_shift)
 {
 	uint32_t flags = arm_read_cpsr(p);
 
@@ -45,12 +169,13 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 
 	uint32_t second_operand, result_value;
 
-	uint8_t shift_amount, shift_type, shift_carry;
+	uint8_t shift_amount, shift_type,shift_carry;
+	shift_carry = 0;
+
+	uint8_t check_sprs_and_pc = arm_check_current_mode_has_spsr(p, S, rd_register_number);
 
 	if (immediate_shift == 0)
 	{
-		debug("register\n");
-
 		uint8_t bit_quatre = get_bit(ins, 4);
 
 		shift_type = get_bits(ins,6,5);
@@ -67,39 +192,21 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			uint8_t register_shift_number = get_bits(ins,11,8);
 			shift_amount = arm_read_register(p, register_shift_number);
 		}
-
 		second_operand = arm_decode_shift(p, shift_type, second_operand, shift_amount, &shift_carry, immediate_shift);
 	}
 	else
 	{
-		debug("immediate\n");
 		second_operand = get_bits(ins,7,0);
 		shift_amount = get_bits(ins,11,8);
 		second_operand = ror(second_operand, shift_amount*2);
 	}
 
-	debug("shift type: %d\n", shift_type);
-	debug("shift amount : %d\n", shift_amount);
-	debug("second operand : %d\n", second_operand);
-	debug("immediate_shift : %d\n", immediate_shift);
-	debug("opcode : %d\n", opcode);
-
 	switch (opcode)
 	{
 		case AND:
 			result_value = first_operand & second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -113,18 +220,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case EOR:
 			result_value = first_operand ^ second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -137,24 +234,9 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case SUB:
-			debug("SUB\n");
 			result_value = first_operand - second_operand;
-			debug("first operand : %d\n", first_operand);
-			debug("second_operand : %d\n", second_operand);
-			debug("rv %d\n", result_value);
 
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -168,18 +250,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case RSB:
 			result_value = second_operand - first_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -193,18 +265,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case ADD:
 			result_value = first_operand + second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -219,18 +281,7 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 		case ADC:
 			result_value = first_operand + second_operand + carry_bit;
 
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -244,80 +295,60 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case SBC:
 			result_value = first_operand - second_operand - !carry_bit;
-						if(S && rd_register_number == 15)
-						{
-								if (arm_current_mode_has_spsr(p))
-				{
-						 arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-						 //UNPREDICTABLE
-				}
-						}
-						else if(S)
-						{
-								arm_update_flags(
-									p,
-										get_bit(result_value, 31),
-										(result_value == 0),
-										!borrow_from(first_operand, second_operand - !carry_bit),
-										overflow_from(first_operand, second_operand - !carry_bit, result_value, 0)
-								);
-						}
-						arm_write_register(p, rd_register_number, result_value);
+
+			if(S && ! check_sprs_and_pc)
+			{
+				arm_update_flags(
+					p,
+						get_bit(result_value, 31),
+						(result_value == 0),
+						!borrow_from(first_operand, second_operand - !carry_bit),
+						overflow_from(first_operand, second_operand - !carry_bit, result_value, 0)
+				);
+			}
+			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case RSC:
 			result_value = second_operand - first_operand - !carry_bit;
-						if(S && rd_register_number == 15)
-						{
-								if (arm_current_mode_has_spsr(p))
-				{
-						 arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-						 //UNPREDICTABLE
-				}
-						}
-						else if(S)
-						{
-								arm_update_flags(
-									p,
-										get_bit(result_value, 31),
-										(result_value == 0),
-										!borrow_from(second_operand, first_operand - !carry_bit),
-										overflow_from(second_operand,first_operand - !carry_bit, result_value, 0)
-								);
-						}
-						arm_write_register(p, rd_register_number, result_value);
+
+			if(S && ! check_sprs_and_pc)
+			{
+				arm_update_flags(
+					p,
+						get_bit(result_value, 31),
+						(result_value == 0),
+						!borrow_from(second_operand, first_operand - !carry_bit),
+						overflow_from(second_operand,first_operand - !carry_bit, result_value, 0)
+				);
+			}
+			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case TST:
 			 arm_update_flags(
 				p,
-								get_bit(first_operand & second_operand, 31),
-								((first_operand & second_operand) == 0),
-								shift_carry,
-								overflow_bit
-						);
+				get_bit(first_operand & second_operand, 31),
+				((first_operand & second_operand) == 0),
+				shift_carry,
+				overflow_bit
+			);
 			break;
 		case TEQ:
 			arm_update_flags(
 				p,
-								get_bit(first_operand ^ second_operand, 31),
-								((first_operand ^ second_operand) == 0),
-								shift_carry,
-								overflow_bit
-						);
+				get_bit(first_operand ^ second_operand, 31),
+				((first_operand ^ second_operand) == 0),
+				shift_carry,
+				overflow_bit
+			);
 			break;
 		case CMP:
 			arm_update_flags(
 				p,
-							get_bit(first_operand - second_operand, 31),
-							((first_operand - second_operand) == 0),
-							!borrow_from(first_operand, second_operand),
-							overflow_from(first_operand,second_operand,first_operand - second_operand,0)
-					);
+				get_bit(first_operand - second_operand, 31),
+				((first_operand - second_operand) == 0),
+				!borrow_from(first_operand, second_operand),
+				overflow_from(first_operand,second_operand,first_operand - second_operand,0)
+			);
 			break;
 		case CMN:
 			arm_update_flags(
@@ -330,18 +361,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case ORR:
 			result_value = first_operand | second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -355,18 +376,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case MOV:
 			result_value = second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -376,23 +387,12 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 					overflow_bit
 				);
 			}
-			debug("result: %d\n", result_value);
 			arm_write_register(p, rd_register_number, result_value);
 			break;
 		case BIC:
 			result_value = first_operand & ~second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -406,18 +406,8 @@ static int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediat
 			break;
 		case MVN:
 			result_value = ~second_operand;
-			if (S && rd_register_number == 15)
-			{
-				if (arm_current_mode_has_spsr(p))
-				{
-					arm_write_cpsr(p, arm_read_spsr(p));
-				}
-				else
-				{
-					//UNPREDICTABLE
-				}
-			}
-			else if (S)
+
+			if (S && ! check_sprs_and_pc)
 			{
 				arm_update_flags(
 					p,
@@ -442,5 +432,5 @@ int arm_data_processing_shift(arm_core p, uint32_t ins) {
 }
 
 int arm_data_processing_immediate_msr(arm_core p, uint32_t ins) {
-  return arm_data_processing_switch(p, ins, 1);
+	return arm_data_processing_switch(p, ins, 1);
 }
