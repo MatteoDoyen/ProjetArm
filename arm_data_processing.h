@@ -26,7 +26,6 @@ Contact: Guillaume.Huard@imag.fr
 #include <limits.h>
 #include "util.h"
 #include "arm_core.h"
-#include "debug.h"
 
 // see manual page 1123 "borrow_from" function
 static inline int borrow_from(uint32_t operand_a, uint32_t operand_b)

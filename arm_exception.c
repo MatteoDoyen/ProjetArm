@@ -25,7 +25,6 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_core.h"
 #include "util.h"
 #include "debug.h"
-#include <stdlib.h>
 
 // Not supported below ARMv6, should read as 0
 #define CP15_reg1_EEbit 0
@@ -71,7 +70,6 @@ static int next_instruction_address(arm_core p)
 }
 
 static void reset_exception(arm_core p, uint32_t cpsr) {
-	debug("false exc\n");
 	arm_write_cpsr(p, reset_mask | (cpsr & 0xFFFFFC00) | Exception_bit_9);
 	// write pc address
 	vector_address_type(p, 0x0000);
@@ -149,9 +147,6 @@ static void fast_interrupt_exception(arm_core p, uint32_t cpsr) {
 void arm_exception(arm_core p, unsigned char exception) {
 
 	uint32_t old_cpsr = arm_read_cpsr(p);
-
-	debug("old cpsr : %x\n", old_cpsr);
-	debug("enter exceptions : %d\n", exception);
 
 	switch (exception) {
 		case RESET:
