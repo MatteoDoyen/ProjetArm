@@ -159,7 +159,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
 
     debug("RN: %d, base address: 0x%x\n", rn, base_address);
 
-    int i = 0
+    int i = 0;
 
     for (i = 0; i < 16; i++) {
         if (get_bit(register_list, i)) {
@@ -177,7 +177,7 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     debug("start address: 0x%x\n", base_address);
 
     i = 0;
-    
+
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
