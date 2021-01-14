@@ -7,7 +7,8 @@
 `unzip supp_sources.zip`
 
 ### Configuration du projet
-`./configure CFLAGS='-Wall -Werror -g'`
+`./configure CFLAGS='-Wall -Werror -g'` _// debug_
+`./configure CFLAGS='-O3'` _// release_
 
 _Si permission refusée : `chmod 755 configure`_
 
