@@ -44,11 +44,6 @@ int arm_load_store(arm_core p, uint32_t ins) {
 
     if (bit_register_offset) { // register offset
         offset = arm_read_register(p, get_bits(ins, 3, 0));
-<<<<<<< HEAD
-
-=======
-
->>>>>>> c80df7fc7051950c30a49f50e7215e32ad0d6301
         if (get_bits(ins, 11, 4)) { // scaled register offset
             uint8_t shift_imm = get_bits(ins, 11, 7);
 
