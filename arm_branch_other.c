@@ -24,7 +24,6 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_constants.h"
 #include "util.h"
 #include "arm_utils.h"
-#include <debug.h>
 #include <stdlib.h>
 
 int arm_branch(arm_core p, uint32_t ins)
@@ -129,8 +128,8 @@ int arm_miscellaneous(arm_core p, uint32_t ins)
         if (reg == 15)
         {
             return -1;
-        } 
-        else 
+        }
+        else
         {
             int R = get_bit(ins, 22);
             if (R)

@@ -26,7 +26,7 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_branch_other.h"
 #include "arm_utils.h"
 
-uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry, uint8_t immediate_shift) 
+uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint8_t shift_amount, uint8_t *shift_carry, uint8_t immediate_shift)
 {
     uint32_t flags = arm_read_cpsr(p);
     *shift_carry = get_bit(flags, C);
@@ -134,7 +134,7 @@ uint32_t arm_decode_shift(arm_core p, uint8_t shift_type, uint32_t operand, uint
     return operand;
 }
 
-uint8_t arm_check_current_mode_has_spsr(arm_core p, uint8_t S, uint8_t rd_register_number) 
+uint8_t arm_check_current_mode_has_spsr(arm_core p, uint8_t S, uint8_t rd_register_number)
 {
 	if (S && rd_register_number == 15)
 	{
@@ -172,6 +172,7 @@ int arm_data_processing_switch(arm_core p, uint32_t ins, uint8_t immediate_shift
 	uint8_t shift_amount, shift_type,shift_carry;
 	shift_carry = 0;
 
+  // value is 1 if "S && rd_register_number == 15" and 0 else
 	uint8_t check_sprs_and_pc = arm_check_current_mode_has_spsr(p, S, rd_register_number);
 
 	if (immediate_shift == 0)

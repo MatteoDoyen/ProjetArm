@@ -3,9 +3,8 @@
 #include "arm_constants.h"
 #include "arm_core.h"
 #include "util.h"
-#include "debug.h"
 
-void arm_update_flags(arm_core p, uint8_t n_flag, uint8_t z_flag, uint8_t c_flag, uint8_t v_flag) 
+void arm_update_flags(arm_core p, uint8_t n_flag, uint8_t z_flag, uint8_t c_flag, uint8_t v_flag)
 {
     uint32_t flags = arm_read_cpsr(p);
 
@@ -15,7 +14,7 @@ void arm_update_flags(arm_core p, uint8_t n_flag, uint8_t z_flag, uint8_t c_flag
     arm_write_cpsr(p, flags);
 }
 
-int arm_check_condition(arm_core p, uint8_t condition_field) 
+int arm_check_condition(arm_core p, uint8_t condition_field)
 {
 
 	int condition_state = UNPASSED;

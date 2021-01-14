@@ -24,7 +24,6 @@ Contact: Guillaume.Huard@imag.fr
 #include "arm_exception.h"
 #include "arm_constants.h"
 #include "util.h"
-#include "debug.h"
 
 int arm_load_store(arm_core p, uint32_t ins) {
 
@@ -40,28 +39,20 @@ int arm_load_store(arm_core p, uint32_t ins) {
     uint8_t rd = get_bits(ins, 15, 12);
     uint32_t base_address = arm_read_register(p, rn);
 
-    debug("RN: %d, RD: %d\n", rn, rd);
-    debug("base address: 0x%x\n", base_address);
-
     int32_t offset = 0;
     uint32_t value = 0;
 
     if (bit_register_offset) { // register offset
-        debug("RM: %d\n", get_bits(ins, 3, 0));
         offset = arm_read_register(p, get_bits(ins, 3, 0));
-        
-        debug("register offset\n");
+
         if (get_bits(ins, 11, 4)) { // scaled register offset
-            debug("scaled\n");
             uint8_t shift_imm = get_bits(ins, 11, 7);
 
             switch(get_bits(ins, 6, 5)) {
                 case LSL:
-                    debug("shift: LSL\n");
                     offset = offset << shift_imm;
                     break;
                 case LSR:
-                    debug("shift: LSR\n");
                     if (shift_imm == 0) {
                         offset = 0;
                     }
@@ -70,24 +61,19 @@ int arm_load_store(arm_core p, uint32_t ins) {
                     }
                     break;
                 case ASR:
-                    debug("shift: ASR\n");
                     offset = asr(offset, shift_imm);
                     break;
                 case ROR:
-                    debug("shift: ROR\n");
                     offset = ror(offset, shift_imm);
                     break;
             }
         }
     }
     else { // immediate
-        debug("immediate\n");
         offset = get_bits(ins, 11, 0);
     }
 
     offset = bit_add ? offset : -offset;
-
-    debug("offset: %d\n", offset);
 
     if (bit_P) {
         if (!bit_W && rn == 15) {
@@ -96,10 +82,7 @@ int arm_load_store(arm_core p, uint32_t ins) {
         base_address += offset;
     }
 
-    debug("start address: 0x%x\n", base_address);
-
     if (bit_load) { // load
-        debug("load\n");
         if (bit_byte) {
             uint8_t byte = 0;
             success = success && !arm_read_byte(p, base_address, &byte);
@@ -112,31 +95,23 @@ int arm_load_store(arm_core p, uint32_t ins) {
                 arm_write_cpsr(p, cpsr_value);
                 value &= 0xFFFFFFFE;
             }
-            debug("word: %d\n", value);
             arm_write_register(p, rd, value);
         }
     }
     else { // store
-        debug("store\n");
         value = arm_read_register(p, rd);
         if (bit_byte) {
-            debug("byte\n");
             success = success && !arm_write_byte(p, base_address, (uint8_t)value);
         }
         else {
-            debug("word\n");
             success = success && !arm_write_word(p, base_address, value);
         }
     }
 
     if (bit_P == bit_W) {
-        debug("write-back\n");
         base_address = bit_P ? base_address : base_address + offset;
         arm_write_register(p, rn, base_address);
     }
-    
-    debug("--------------------------------------\n");
-
     return success - 1;
 }
 // bit S ne peut pas être à 1 pour LDM(1) et STM(1)
@@ -157,13 +132,10 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     int8_t number_bit_set = 0;
     int8_t registers_tab[16] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
-    debug("RN: %d, base address: 0x%x\n", rn, base_address);
-
     int i = 0;
 
     for (i = 0; i < 16; i++) {
         if (get_bit(register_list, i)) {
-            debug("%d\n", i);
             registers_tab[number_bit_set] = i;
             number_bit_set++;
         }
@@ -174,14 +146,12 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     base_address = bit_increment ? base_address : base_address - (number_bit_set * 4) + 4;
     base_address = bit_before ? base_address + step : base_address;
 
-    debug("start address: 0x%x\n", base_address);
-
     i = 0;
 
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
-            
+
             if (registers_tab[i] == 15) {
                 uint32_t cpsr_value = clr_bit(arm_read_cpsr(p), 0) | get_bit(value, 0);
                 arm_write_cpsr(p, cpsr_value);
@@ -195,13 +165,10 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
         }
         i++;
     }
-    
+
     if (bit_write_back) {
-        debug("write-back: %d\n", write_back_value);
         arm_write_register(p, rn, write_back_value);
     }
-    
-    debug("--------------------------------------\n");
 
     return success - 1;
 }
@@ -215,8 +182,6 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
         return -1;
         // pas un halfword
     }
-
-    debug("halfword\n");
 
     int success = 1;
     uint8_t bit_P = get_bit(ins, 24);
@@ -234,52 +199,38 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
     uint32_t value = 0;
     uint32_t base_address = arm_read_register(p, rn);
 
-    debug("RN: %d, RD: %d\n", rn, rd);
-    debug("base address: 0x%x\n", base_address);
-
     if (bit_immediate) {
-        debug("immediate\n");
         offset = (addr_mode_H << 4) | addr_mode_L;
     }
     else {
-        debug("register\n");
         offset = arm_read_register(p, addr_mode_L);
     }
 
     offset = bit_add ? offset : -offset;
 
-    debug("offset: %d\n", offset);
-
     if (bit_P) {
         if (!bit_W && rn == 15) {
             base_address += 8;
         }
-        base_address += offset; 
+        base_address += offset;
     }
 
-    debug("start address: 0x%x\n", base_address);
-
     if (bit_load) { // load
-        debug("load\n");
         uint16_t temp = 0;
         success = success && !arm_read_half(p, base_address, &temp);
         value |= temp;
         arm_write_register(p, rd, value);
     }
     else { // store
-        debug("store\n");
         value |= arm_read_register(p, rd);
         success = success && !arm_write_word(p, base_address, value);
     }
 
     if (bit_P == bit_W) {
-        if (!bit_P) 
+        if (!bit_P)
             base_address += offset;
-        debug("write-back: 0x%x\n", base_address);
         arm_write_register(p, rn, base_address);
     }
-
-    debug("--------------------------------------\n");
 
     return success - 1;
 }
