@@ -44,7 +44,11 @@ int arm_load_store(arm_core p, uint32_t ins) {
 
     if (bit_register_offset) { // register offset
         offset = arm_read_register(p, get_bits(ins, 3, 0));
+<<<<<<< HEAD
 
+=======
+
+>>>>>>> c80df7fc7051950c30a49f50e7215e32ad0d6301
         if (get_bits(ins, 11, 4)) { // scaled register offset
             uint8_t shift_imm = get_bits(ins, 11, 7);
 
@@ -112,6 +116,7 @@ int arm_load_store(arm_core p, uint32_t ins) {
         base_address = bit_P ? base_address : base_address + offset;
         arm_write_register(p, rn, base_address);
     }
+
     return success - 1;
 }
 // bit S ne peut pas être à 1 pour LDM(1) et STM(1)
@@ -147,7 +152,6 @@ int arm_load_store_multiple(arm_core p, uint32_t ins) {
     base_address = bit_before ? base_address + step : base_address;
 
     i = 0;
-
     while (registers_tab[i] != -1) {
         if (bit_load) { // load
             success = success && !arm_read_word(p, base_address + 4 * i, &value);
@@ -226,7 +230,7 @@ int arm_extra_load_store(arm_core p, uint32_t ins) {
         success = success && !arm_write_word(p, base_address, value);
     }
 
-    if (bit_P == bit_W) {
+    if (bit_P == bit_W) { // write-back
         if (!bit_P)
             base_address += offset;
         arm_write_register(p, rn, base_address);

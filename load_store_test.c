@@ -151,6 +151,40 @@ int main() {
     
     printf("STMDB R4!, {R0 - R1, R7} : PASSED\n");
 
+    // STR R8, [R5, -R4]!
+    arm_write_register(p, 8, 0x56565656);
+    arm_write_register(p, 5, 0x900);
+    arm_write_register(p, 4, 0x10);
+
+    arm_load_store(p, 0xe7258004);
+    arm_read_word(p, 0x900 - 0x10, &word);
+    assert(word == 0x56565656);
+    assert(arm_read_register(p, 5) == 0x900 - 0x10);
+    
+    printf("STR R8, [R5, -R4]! : PASSED\n");
+
+    // LDR R11, [R3, R5, LSL #2]
+    assert(arm_write_word(p, 0x600, (uint32_t)8745) == 0);
+    arm_write_register(p, 5, 0x10);
+    arm_write_register(p, 3, 0x600 - (0x10 << 2));
+
+    arm_load_store(p, 0xe793b105);
+    assert(arm_read_register(p, 11) == 8745);
+    
+    printf("LDR R11, [R3, R5, LSL #2] : PASSED\n");
+
+    // STRH R8, [R5], -R4
+    arm_write_register(p, 8, 0x894232ab);
+    arm_write_register(p, 5, 0x1000);
+    arm_write_register(p, 4, 0x15);
+
+    arm_extra_load_store(p, 0xe00580b4);
+    arm_read_half(p, 0x1000, &halfword);
+    assert(halfword == (uint16_t)0x894232ab);
+    assert(arm_read_register(p, 5) == 0x1000 - 0x15);
+    
+    printf("STRH R8, [R5], -R4 : PASSED\n");
+
     printf("END load_store_test.c\n");
 
     return EXIT_SUCCESS;

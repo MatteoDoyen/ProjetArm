@@ -64,3 +64,5 @@ stamp-h1
 aclocal.m4
 configure
 autom4te.cache/
+load_store_test
+registers_test
