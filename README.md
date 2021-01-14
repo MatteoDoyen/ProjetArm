@@ -14,7 +14,7 @@ _Si permission refusée : `chmod 755 configure`_
 `make`
 
 ## Exécution des tests
-Listes des tests automatisés :
+# Tests automatisés :
 * memory_test
 * load_store_test
 * registers_test
@@ -23,5 +23,5 @@ Listes des tests automatisés :
 Dans un terminal :  
 `./<nom du test>`
   
-Test non-automatisé :
+# Test non-automatisé :
 * test_data_processing.s
