@@ -14,8 +14,6 @@ int main() {
     uint16_t halfword;
     uint8_t byte;
 
-    printf("START load_store_test.c :\n");
-
     // LDR R1, [R0]
     assert(arm_write_word(p, 0x500, (uint32_t)456) == 0);
     arm_write_register(p, 0, 0x500);
@@ -184,8 +182,6 @@ int main() {
     assert(arm_read_register(p, 5) == 0x1000 - 0x15);
     
     printf("STRH R8, [R5], -R4 : PASSED\n");
-
-    printf("END load_store_test.c\n");
 
     return EXIT_SUCCESS;
 }
