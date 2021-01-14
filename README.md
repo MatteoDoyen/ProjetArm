@@ -22,3 +22,6 @@ Listes des tests automatisés :
 
 Dans un terminal :  
 `./<nom du test>`
+  
+Test non-automatisé :
+* test_data_processing.s
